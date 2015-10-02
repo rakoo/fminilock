@@ -1,10 +1,8 @@
 package minilock
 
 import (
+  "bytes"
   "testing"
-  //"fmt"
-  //"github.com/cathalgarvey/go-minilock/minilockkeys"
-  "github.com/cathalgarvey/go-minilock/minilockutils"
 )
 
 func Test_RoundTripMinilock(t *testing.T) {
@@ -37,7 +35,7 @@ func Test_RoundTripMinilock(t *testing.T) {
   if filename != "mye.go" {
     t.Error("Received filename [1] didn't match encrypted filename [2]: ", filename, "mye.go")
   }
-  if !minilockutils.CmpSlices(testcase, contents) {
+  if !bytes.Equal(testcase, contents) {
     t.Error("Received plaintext [1] didn't match encrypted plaintext [2]: \n", string(contents), "\n", string(testcase))
   }
 }

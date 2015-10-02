@@ -2,9 +2,9 @@ package minilockbox
 
 import (
   "fmt"
+  "bytes"
   "testing"
   "encoding/base64"
-  "github.com/cathalgarvey/go-minilock/minilockutils"
 )
 
 func Test_NonceGen(t *testing.T) {
@@ -27,7 +27,7 @@ func Test_NonceGen(t *testing.T) {
     if err != nil {
       t.Error(err.Error())
     }
-    if !minilockutils.CmpSlices(n, nonce) {
+    if !bytes.Equal(n, nonce) {
       t.Error("Nonces don't match:\n\tExpected: ", nonce, "\n\tCreated: ", n)
     }
   }
@@ -36,7 +36,7 @@ func Test_NonceGen(t *testing.T) {
   if err != nil {
     t.Error(err.Error())
   }
-  if !minilockutils.CmpSlices(last_nonce, ch_12_last) {
+  if !bytes.Equal(last_nonce, ch_12_last) {
     t.Error("Nonces don't match:\n\tExpected: ", ch_12_last, "\n\tCreated: ", last_nonce)
   }
 }
@@ -53,7 +53,7 @@ func Test_BlockRoundTrip(t *testing.T) {
   if err != nil {
     t.Error(err.Error())
   }
-  if !minilockutils.CmpSlices(decrypted, plaintext) {
+  if !bytes.Equal(decrypted, plaintext) {
     t.Error("Decrypted block did not equal original plaintext:",
       "\nOriginal:\t", plaintext,
       "\nDecryptd:\t", decrypted)
@@ -66,7 +66,7 @@ func Test_BlockRoundTrip(t *testing.T) {
   if len(blocks) == 0 {
     t.Fatal("Unable to parse any blocks from ciphertext..")
   }
-  if !minilockutils.CmpSlices(ciphertext.Block, blocks[0].Block) {
+  if !bytes.Equal(ciphertext.Block, blocks[0].Block) {
     t.Error("Decrypted block did not equal original plaintext:",
       "\nBlock :\t", ciphertext.Block,
       "\nWalked:\t", blocks[0].Block)
@@ -95,7 +95,7 @@ func Test_OneBlockEncrypt(t *testing.T) {
   if len(ciphertext) != len(expected) {
     t.Error("Length of expected vs. ciphertext differed: ", len(expected), "vs", len(ciphertext))
   }
-  if !minilockutils.CmpSlices(ciphertext, expected) {
+  if !bytes.Equal(ciphertext, expected) {
     t.Error("Ciphertext did not match expected result: \nCT:\t", ciphertext, "\nExp:\t", expected)
   }
   // Now also test decryption.
@@ -137,7 +137,7 @@ func Test_ManyBlockEncrypt(t *testing.T) {
   ct_chunks := chunkify(ciphertext, ch_size)
   ex_chunks := chunkify(expected, ch_size)
   for i := 0; i < len(ct_chunks); i++ {
-    if !minilockutils.CmpSlices(ct_chunks[i], ex_chunks[i]) {
+    if !bytes.Equal(ct_chunks[i], ex_chunks[i]) {
       t.Fatal("Comparison of ciphertext:expected chunks failed at chunk #", i,
           ":\nExpected:\t",ex_chunks[i],
            "\nCiphertx:\t",ct_chunks[i])
@@ -154,7 +154,7 @@ func Test_ManyBlockEncrypt(t *testing.T) {
   pt_chunks := chunkify(plaintext, ch_size)
   pt2_chunks := chunkify(decrypted, ch_size)
   for i := 0; i < len(pt_chunks); i++ {
-    if !minilockutils.CmpSlices(pt_chunks[i], pt2_chunks[i]) {
+    if !bytes.Equal(pt_chunks[i], pt2_chunks[i]) {
       t.Fatal("Comparison of plaintext:decrypted chunks failed at chunk #", i,
           ":\nExpected:\t",pt_chunks[i],
            "\nDecryptd:\t",pt2_chunks[i])

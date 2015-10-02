@@ -2,9 +2,7 @@ package minilock
 
 import (
   "testing"
-  //"fmt"
-  //"github.com/cathalgarvey/go-minilock/minilockkeys"
-  "github.com/cathalgarvey/go-minilock/minilockutils"
+  "bytes"
 )
 
 func Test_ParseMinilockFile(t *testing.T) {
@@ -33,7 +31,7 @@ func Test_ParseMinilockFile(t *testing.T) {
   if filename != "mye.go" {
     t.Error("Filename returned should have been 'mye.go', was: "+filename)
   }
-  if !minilockutils.CmpSlices(contents, expected_plaintext) {
+  if !bytes.Equal(contents, expected_plaintext) {
     t.Error("Plaintext did not match expected plaintext.")
   }
   senderID2, filename2, contents2, err := DecryptFileContents(testcase, test1)
@@ -46,7 +44,7 @@ func Test_ParseMinilockFile(t *testing.T) {
   if filename != filename2 {
     t.Error("Inconsistency between filename returned by DecryptFileContents and manual parsing/header decryption.")
   }
-  if !minilockutils.CmpSlices(contents2, expected_plaintext) {
+  if !bytes.Equal(contents2, expected_plaintext) {
     t.Error("Plaintext did not match expected plaintext.")
   }
 }

@@ -1,7 +1,7 @@
 package minilock
 
 import (
-  //"bytes"
+  "bytes"
   //"fmt"
   "encoding/json"
   "encoding/base64"
@@ -53,7 +53,7 @@ func encryptFileToFileInfo(nonce, key []byte, filename string, filecontents []by
 func (self *FileInfo) DecryptFile(ciphertext []byte) (filename string, contents []byte, err error) {
   // minilockbox.Decrypt(key, base_nonce, ciphertext []byte) (filename string, plaintext []byte, err error)
   hash := blake2s.Sum256(ciphertext)
-  if !minilockutils.CmpSlices(self.FileHash, hash[:]) {
+  if !bytes.Equal(self.FileHash, hash[:]) {
     return "", nil, minilockutils.AuthenticationError("File hash did not match!")
   }
   filename, contents, err = minilockbox.Decrypt(self.FileKey, self.FileNonce, ciphertext)

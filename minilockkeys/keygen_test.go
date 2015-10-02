@@ -16,7 +16,7 @@ func Test_base58(t *testing.T) {
   if err != nil {
     t.Fatal(err.Error())
   }
-  if !minilockutils.CmpSlices(vector, test_b58) {
+  if !bytes.Equal(vector, test_b58) {
     t.Error("Base58 decoding failed:\n Vector: ", vector, "\n Decd'd: ", test_b58)
   }
   vector2, err := base64.StdEncoding.DecodeString("r8+3mEzmBWqTAEu0hy7pTxiqUiDMV68Evr7vqENQ")
@@ -27,7 +27,7 @@ func Test_base58(t *testing.T) {
   if err != nil {
     t.Fatal(err.Error())
   }
-  if !minilockutils.CmpSlices(vector2, test2_b58) {
+  if !bytes.Equal(vector2, test2_b58) {
     t.Error("Base58 decoding failed:\n Vector: ", vector2, "\n Decd'd: ", test2_b58)
   }
 }
@@ -46,10 +46,10 @@ func Test_Keygen(t *testing.T) {
   if err != nil {
     t.Fatal(err.Error())
   }
-  if !minilockutils.CmpSlices(test_private_key, gen_key.Private) {
+  if !bytes.Equal(test_private_key, gen_key.Private) {
     t.Fatal("Generated private key does not match test key:\n ", test_private_key,"\n ", gen_key.Private)
   }
-  if !minilockutils.CmpSlices(test_public_key, gen_key.Public) {
+  if !bytes.Equal(test_public_key, gen_key.Public) {
     t.Fatal("Generated public key does not match test key:\n ", test_public_key,"\n ", gen_key.Public)
   }
   gen_id, err := gen_key.EncodeID()
@@ -63,7 +63,7 @@ func Test_Keygen(t *testing.T) {
   if err != nil {
     t.Fatal(err.Error())
   }
-  if !minilockutils.CmpSlices(pub_from_id.Public, gen_key.Public) {
+  if !bytes.Equal(pub_from_id.Public, gen_key.Public) {
     t.Fatal("ID-imported public key does not match test key:\n ", test_public_key,"\n ", gen_key.Public)
   }
 }

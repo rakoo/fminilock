@@ -48,7 +48,3 @@ func Test_ParseMinilockFile(t *testing.T) {
 		t.Error("Plaintext did not match expected plaintext.")
 	}
 }
-
-// func (self *miniLockv1Header) ExtractDecryptInfo(recipientKey *minilockkeys.NaClKeypair) (nonce []byte, DI *DecryptInfoEntry, err error) {
-// func (self *miniLockv1Header) ExtractFileInfo(recipientKey *minilockkeys.NaClKeypair) (*FileInfo, error) {
-// func (self *miniLockv1Header) DecryptContents(ciphertext []byte, recipientKey *minilockkeys.NaClKeypair) (senderID, filename string, contents []byte, err error) {

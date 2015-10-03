@@ -1,0 +1,115 @@
+PACKAGE DOCUMENTATION
+
+package taber
+    import "github.com/cathalgarvey/go-minilock/taber"
+
+
+CONSTANTS
+
+const (
+    CHUNK_SIZE            = 1048576
+    FILENAME_BLOCK_LENGTH = (256 + 16 + 4)
+    BLOCK_LENGTH          = CHUNK_SIZE + 16 + 4
+)
+
+VARIABLES
+
+var (
+    WrongLengthKeyError         = errors.New("Encryption key must be 32 bytes long.")
+    BadBaseNonceError           = errors.New("Length of base_nonce must be 16.")
+    BadLengthPrefixError        = errors.New("Block length prefixes indicate a length longer than the remaining ciphertext.")
+    BadGeneratedPrefixError     = errors.New("Chunk length prefix is longer than 4 bytes, would clobber ciphertext.")
+    BoxAuthenticationError      = errors.New("Authentication of box failed on opening.")
+    BoxDecryptionVariablesError = errors.New("Key or Nonce is not correct length to attempt decryption.")
+    BoxDecryptionEOPError       = errors.New("Declared length of chunk would write past end of plaintext slice!")
+    BoxDecryptionEOSError       = errors.New("Chunk length is longer than expected slot in plaintext slice.")
+    FilenameTooLongError        = errors.New("Filename cannot be longer than 256 bytes.")
+    NotEnoughRandomnessError    = errors.New("Got insufficient random bytes from RNG.")
+)
+
+var (
+    ChecksumGenerationError      = errors.New("Generating checksum value failed..")
+    EntropyInconsistencyError    = errors.New("Asked for 32 bytes of rand.Reader but got some other number!")
+    InvalidIDLengthError         = errors.New("Provided public ID was not expected length (33 bytes when decoded).")
+    InvalidIDChecksumError       = errors.New("Provided public ID had an invalid checksum.")
+    PrivateKeyOnlyOperationError = errors.New("Cannot conduct specified operation using a public-only keypair.")
+    NonceLengthError             = errors.New("Nonce length must be 24 length.")
+    KeyDecryptionError           = errors.New("Authentication of decryption using keys failed.")
+)
+
+TYPES
+
+type DecryptInfo struct {
+    // Decryption key (32 bytes) and Nonce (24 bytes) required to decrypt.
+    Key, BaseNonce []byte
+}
+    A structured object returned by Encrypt to go with ciphertexts, which
+    provides a method for Decrypting ciphertexts. Can easily be constructed
+    from raw data, passed around, serialised, etcetera.
+
+func Encrypt(filename string, file_data []byte) (DI *DecryptInfo, ciphertext []byte, err error)
+    Generates random key/nonce, encrypts the data with it, and returns a
+    DecryptInfo object for storage, serialisation or deconstruction, along
+    with the ciphertext. According to the miniLock encryption protocol, the
+    filename is encrypted in the first block.
+
+func (self *DecryptInfo) Decrypt(ciphertext []byte) (filename string, plaintext []byte, err error)
+
+func (self *DecryptInfo) Validate() bool
+
+type Keys struct {
+
+    // May be empty for pubkey-only keypairs.
+    Private []byte
+
+    // Should always be full.
+    Public []byte
+}
+    Taber NaCl keys are stored simply as two byte slices with handy methods
+    attached. They can be generated determnistically from passphrase and
+    email, according to the method used by miniLock.io, or randomly
+    generated. They can emit an "ID" as a string, which is the base58
+    representation of the public Key with a one-byte checksum, and can be
+    imported from same. They have a "Wipe" method which should always be
+    used when finished with the keys to protect keys from compromise.
+
+func FromEmailAndPassphrase(email, passphrase string) (*Keys, error)
+    Generate keys using a passphrase using an email as salt value. The
+    passphrase is first hashed using 32-byte blake2s and is then passed
+    through scrypt using the email as salt. 32 bytes of scrypt output are
+    used to create a private nacl.box key and a keys object.
+
+func FromID(id string) (*Keys, error)
+    Import a public-only Keys struct from an ID string, using the last byte
+    as a blake2s checksum.
+
+func RandomKey() (*Keys, error)
+    Generate a fully random Keys struct from a secure random source.
+
+func (self *Keys) Decrypt(ciphertext, nonce []byte, from *Keys) (plaintext []byte, err error)
+
+func (self *Keys) EncodeID() (string, error)
+    Generate base58-encoded pubkey + 1-byte blake2s checksum as a string.
+
+func (self *Keys) Encrypt(plaintext, nonce []byte, to *Keys) (ciphertext []byte, err error)
+
+func (self *Keys) HasPrivate() bool
+
+func (self *Keys) HasPublic() bool
+
+func (self *Keys) PrivateArray() *[32]byte
+    Some nacl functions require arrays, not slices. Note; the returned array
+    is a copy.
+
+func (self *Keys) PublicArray() *[32]byte
+    Some nacl functions require arrays, not slices. Note; the returned array
+    is a copy.
+
+func (self *Keys) PublicOnly() *Keys
+    Returns a Keys object containing only the public key of this object.
+
+func (self *Keys) Wipe() error
+    Overwrite memory containing key material; calling this method when
+    finished with a key is strongly advised to prevent compromise.
+
+

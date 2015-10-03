@@ -6,8 +6,8 @@ import (
 )
 
 func Test_RoundTripMinilock(t *testing.T) {
-	// EncryptFile(filename string, fileContents []byte, sender *minilockkeys.NaClKeypair, recipients... *minilockkeys.NaClKeypair) (miniLockContents []byte, err error)
-	// DecryptFileContents(file_contents []byte, recipientKey *minilockkeys.NaClKeypair) (senderID, filename string, contents []byte, err error)
+	// EncryptFile(filename string, fileContents []byte, sender *taber.Keys, recipients... *taber.Keys) (miniLockContents []byte, err error)
+	// DecryptFileContents(file_contents []byte, recipientKey *taber.Keys) (senderID, filename string, contents []byte, err error)
 	// Set Up
 	testcase, err := Asset("binary_samples/mye.go")
 	if err != nil {
@@ -40,6 +40,6 @@ func Test_RoundTripMinilock(t *testing.T) {
 	}
 }
 
-// func (self *miniLockv1Header) ExtractDecryptInfo(recipientKey *minilockkeys.NaClKeypair) (nonce []byte, DI *DecryptInfoEntry, err error) {
-// func (self *miniLockv1Header) ExtractFileInfo(recipientKey *minilockkeys.NaClKeypair) (*FileInfo, error) {
-// func (self *miniLockv1Header) DecryptContents(ciphertext []byte, recipientKey *minilockkeys.NaClKeypair) (senderID, filename string, contents []byte, err error) {
+// func (self *miniLockv1Header) ExtractDecryptInfo(recipientKey *taber.Keys) (nonce []byte, DI *DecryptInfoEntry, err error) {
+// func (self *miniLockv1Header) ExtractFileInfo(recipientKey *taber.Keys) (*FileInfo, error) {
+// func (self *miniLockv1Header) DecryptContents(ciphertext []byte, recipientKey *taber.Keys) (senderID, filename string, contents []byte, err error) {

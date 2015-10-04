@@ -1,8 +1,8 @@
 # Go-miniLock
-## A pure-Go reimplementation of the miniLock asymmetric encryption system.
+### A pure-Go reimplementation of the miniLock asymmetric encryption system.
 by Cathal Garvey, Copyright Oct. 2015, proudly licensed under the GNU AGPL.
 
-## What
+### What
 TL;DR: go-miniLock is a total Golang rewrite of miniLock, enabling native code performance,
 more platform flexibility, and downstream potential for automation and novel communication
 media not available to the original miniLock Chromium app.
@@ -50,7 +50,7 @@ answer to the miniLock browser extension, and a library for easily constructing 
 go beyond manual human-to-human cryptography and extend into the automated, networked, or
 decentralised sphere.
 
-## Usage
+### Usage
 Documentation for the library can be found at [godoc](https://godoc.org/github.com/cathalgarvey/go-minilock).
 Functionality is deliberately broken into construction of the encrypted data itself and constructing
 the headers that assist in decryption and obfuscation of communicating parties; this is to enable
@@ -59,12 +59,16 @@ miniLock (such as [Peerio](https://peerio.com)) use detached, updateable headers
 facilitate social file-sharing.
 
 For terminal usage of go-miniLock, you can install the tool with: `go get -u github.com/cathalgarvey/go-minilock/minilock-cli`.
-You can also simply download a precompiled binary from <INSERT BINARY HOST/DIRECTORY> for your
-OS and Platform.
+Usage is simple enough and needs improvement:
+
+    go encrypt <file> <your email> <recipient1> [<recipient2>...]
+    go decrypt <file> <your email>
+
+A number of flags modify usual behaviour.
 
 A UI would be *really* nice but isn't yet on the cards. Watch this space. Meanwhile, use [miniLock](https://minilock.io).
 
-## Where from Here
+### Where from Here
 Here are things I'd really enjoy, if you're feeling creative. I may start on some of these, also..
 
 * Python bindings to go-miniLock, to enable a drastic refactor of [deadlock](https://github.com/cathalgarvey/deadlock).

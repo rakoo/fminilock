@@ -48,7 +48,6 @@ func main() {
 	switch kingpin.Parse() {
 	case "encrypt":
 		kingpin.FatalIfError(encryptFile(), "Failed to encrypt..")
-
 	case "decrypt": {
 		kingpin.FatalIfError(decryptFile(), "Failed to decrypt..")
 	}
@@ -56,7 +55,9 @@ func main() {
     fmt.Println("No subcommand provided..")
   }
   }
-  userKey.Wipe()
+  if userKey != nil {
+    userKey.Wipe()
+  }
 }
 
 func encryptFile() error {

@@ -16,7 +16,7 @@ func Test_RoundTripMinilock(t *testing.T) {
 	sender := testKey1
 	recipient := testKey2
 	// Encryption
-	gen_crypted, err := EncryptFile("mye.go", testcase, sender, recipient.PublicOnly(), sender.PublicOnly())
+	gen_crypted, err := EncryptFileContents("mye.go", testcase, sender, recipient.PublicOnly(), sender.PublicOnly())
 	if err != nil {
 		t.Fatal("Couldn't create encrypted test case: ", err.Error())
 	}

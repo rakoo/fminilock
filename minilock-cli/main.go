@@ -9,6 +9,7 @@ import (
     "fmt"
     "io/ioutil"
   	"github.com/alecthomas/kingpin"
+    "github.com/cathalgarvey/go-minilock/taber"
     "github.com/cathalgarvey/go-minilock"
     "github.com/howeyc/gopass"
 )
@@ -36,6 +37,9 @@ var (
   encryptToSelf = encrypt.Flag("encrypt-to-self", "Whether to add own ID to recipients list, default is True.").
     Short('s').Default("true").Bool()
 
+  mlfilecontents []byte
+  userKey *taber.Keys
+  err error
 )
 
 func main() {
@@ -52,6 +56,7 @@ func main() {
     fmt.Println("No subcommand provided..")
   }
   }
+  userKey.Wipe()
 }
 
 func encryptFile() error {
@@ -60,14 +65,14 @@ func encryptFile() error {
     return err
   }
   pp := getPass()
-  mlfilecontents, err := minilock.EncryptFileContentsWithStrings(*efile, f, *eUserEmail, pp, *encryptToSelf, *recipients...)
+  mlfilecontents, err = minilock.EncryptFileContentsWithStrings(*efile, f, *eUserEmail, pp, *encryptToSelf, *recipients...)
   if err != nil {
     return err
   }
   if *OutputFileName == "NOTGIVEN" {
     *OutputFileName = *efile + ".minilock"
   }
-  userKey, err := minilock.GenerateKey(*eUserEmail, pp)
+  userKey, err = minilock.GenerateKey(*eUserEmail, pp)
   if err != nil {
     return err
   }
@@ -81,11 +86,11 @@ func encryptFile() error {
 
 func decryptFile() error {
   pp := getPass()
-  userKey, err := minilock.GenerateKey(*dUserEmail, pp)
+  userKey, err = minilock.GenerateKey(*dUserEmail, pp)
   if err != nil {
     return err
   }
-  mlfilecontents, err := ioutil.ReadFile(*dfile)
+  mlfilecontents, err = ioutil.ReadFile(*dfile)
   if err != nil {
     return err
   }

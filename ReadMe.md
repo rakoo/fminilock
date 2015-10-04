@@ -58,13 +58,24 @@ use of the library for more than just miniLock-of-files, but also because other 
 miniLock (such as [Peerio](https://peerio.com)) use detached, updateable headers as a way to
 facilitate social file-sharing.
 
+Much of the slightly-lower-level crypto stuff is in a sub-package called "taber",
+which can be imported separately with `import "github.com/cathalgarvey/go-minilock/taber"`,
+and documentation for which is [here on Godoc](https://godoc.org/github.com/cathalgarvey/go-minilock/taber).
+
 For terminal usage of go-miniLock, you can install the tool with: `go get -u github.com/cathalgarvey/go-minilock/minilock-cli`.
 Usage is simple enough and needs improvement:
 
     go encrypt <file> <your email> <recipient1> [<recipient2>...]
     go decrypt <file> <your email>
 
-A number of flags modify usual behaviour.
+A number of flags modify usual behaviour. The most important is probably the "-p"
+flag which allows the passphrase for the user's key to be provided directly instead
+of being requested interactively; this allows shell-scripting using minilock-cli,
+or simply aliasing to create a rapid way of encrypting or decrypting things using
+your key. Beware, obviously, that for *personal* uses this breaks one of the security
+features of minilock, namely that personal keys are not stored but *remembered*!
+This feature, therefore, was more intended for server-side or scripting uses than
+for individuals.
 
 A UI would be *really* nice but isn't yet on the cards. Watch this space. Meanwhile, use [miniLock](https://minilock.io).
 
@@ -87,3 +98,10 @@ Here are things I'd really enjoy, if you're feeling creative. I may start on som
     - Bonus: IMAP/SMTP adaptor 'client' for mail client alternative.
     - Bonus: IRC/XMPP adaptor 'client' for chat client alternatives.
     - Bonus: "Sync Folder Contents" option for dropbox-style crypto-extension to Peerio.
+
+### Credits Reel
+* [GNU Foundation](https://gnu.org) for Free Software and the GPL/AGPL. :)
+* [Nadim Kobaissi](https://nadim.computer) for miniLock itself.
+* [dchest](https://github.com/dchest) for [blake2s](https://github.com/dchest/blake2s), necessary for file hashing in miniLock.
+* [alecthomas](https://github.com/alecthomas) for [kingpin](https://github.com/alecthomas/kingpin), used for CLI flag parsing.
+* [howeyc](https://github.com/howeyc) for [gopass](https://github.com/howeyc/gopass), used for secure interactive password input.

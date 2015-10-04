@@ -20,19 +20,23 @@ func ParseFile(filepath string) (header *miniLockv1Header, ciphertext []byte, er
 
 // Parses a miniLock file and returns header and ciphertext.
 func ParseFileContents(contents []byte) (header *miniLockv1Header, ciphertext []byte, err error) {
-	magic := string(contents[:8])
-	if magic != magicBytes {
+  var (
+		header_length_i32 int32
+		header_length int
+    header_bytes []byte
+	)
+	if string(contents[:8]) != magicBytes {
 		return nil, nil, MagicBytesError
 	}
-	header_length_i32, err := fromLittleEndian(contents[8:12])
+	header_length_i32, err = fromLittleEndian(contents[8:12])
 	if err != nil {
 		return nil, nil, err
 	}
-	header_length := int(header_length_i32)
+	header_length = int(header_length_i32)
 	if 12+header_length > len(contents) {
 		return nil, nil, BadLengthPrefixError
 	}
-	header_bytes := contents[12 : 12+header_length]
+	header_bytes = contents[12 : 12+header_length]
 	ciphertext = contents[12+header_length:]
 	header = new(miniLockv1Header)
 	err = json.Unmarshal(header_bytes, header)
@@ -62,12 +66,15 @@ func DecryptFileContents(file_contents []byte, recipientKey *taber.Keys) (sender
 // each chunk, then validate the hash of the file against the hash given in FileInfo.
 // The result is a validated, decrypted filename and file contents byte-slice.
 func (self *FileInfo) DecryptFile(ciphertext []byte) (filename string, contents []byte, err error) {
-	// minilockbox.Decrypt(key, base_nonce, ciphertext []byte) (filename string, plaintext []byte, err error)
-	hash := blake2s.Sum256(ciphertext)
+  var (
+		hash [32]byte
+		DI taber.DecryptInfo
+	)
+	hash = blake2s.Sum256(ciphertext)
 	if !bytes.Equal(self.FileHash, hash[:]) {
 		return "", nil, CTHashMismatchError
 	}
-	DI := taber.DecryptInfo{Key: self.FileKey, BaseNonce: self.FileNonce}
+	DI = taber.DecryptInfo{Key: self.FileKey, BaseNonce: self.FileNonce}
 	return DI.Decrypt(ciphertext)
 }
 

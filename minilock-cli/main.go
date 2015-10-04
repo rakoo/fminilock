@@ -27,9 +27,9 @@ var (
     Arg("user-email", "Your email address. This need not be secret, but if this isn't *accurate* it must be *globally unique*, it is used for generating security.").
     Required().String()
 
-  eOutputFileName = encrypt.Flag("output", "Name of output file. By default for encryption, this is input filename + '.minilock', and for decryption this is the indicated filename in the ciphertext. Warning: Right now this presents potential security hazards!").
-    Short('o').Default("NOTGIVEN").String()
-  dOutputFileName = decrypt.Flag("output", "Name of output file. By default for encryption, this is input filename + '.minilock', and for decryption this is the indicated filename in the ciphertext. Warning: Right now this presents potential security hazards!").
+  PassPhrase = encrypt.Flag("passphrase", "Full passphrase for this miniLock key. If not given through this flag, it will be asked for interactively").
+    Short('p').String()
+  OutputFileName = encrypt.Flag("output", "Name of output file. By default for encryption, this is input filename + '.minilock', and for decryption this is the indicated filename in the ciphertext. Warning: Right now this presents potential security hazards!").
     Short('o').Default("NOTGIVEN").String()
 
   recipients = encrypt.Arg("recipients", "One or more miniLock IDs to add to encrypted file.").Strings()
@@ -55,19 +55,17 @@ func main() {
 }
 
 func encryptFile() error {
-//EncryptFileContents(filename string, fileContents []byte, sender *taber.Keys, recipients ...*taber.Keys) (miniLockContents []byte, err error)
   f, err := ioutil.ReadFile(*efile)
   if err != nil {
     return err
   }
   pp := getPass()
-  // minilock.EncryptFileContentsWithStrings(filename string, fileContents []byte, senderEmail, senderPassphrase string, sendToSender bool, recipientIDs... string)  (miniLockContents []byte, err error){
   mlfilecontents, err := minilock.EncryptFileContentsWithStrings(*efile, f, *eUserEmail, pp, *encryptToSelf, *recipients...)
   if err != nil {
     return err
   }
-  if *eOutputFileName == "NOTGIVEN" {
-    *eOutputFileName = *efile + ".minilock"
+  if *OutputFileName == "NOTGIVEN" {
+    *OutputFileName = *efile + ".minilock"
   }
   userKey, err := minilock.GenerateKey(*eUserEmail, pp)
   if err != nil {
@@ -78,11 +76,10 @@ func encryptFile() error {
     return err
   }
   fmt.Println("File encrypted using ID: '"+userID+"'")
-  return ioutil.WriteFile(*eOutputFileName, mlfilecontents, 33204)
+  return ioutil.WriteFile(*OutputFileName, mlfilecontents, 33204)
 }
 
 func decryptFile() error {
-//DecryptFileContents(file_contents []byte, recipientKey *taber.Keys) (senderID, filename string, contents []byte, err error) {
   pp := getPass()
   userKey, err := minilock.GenerateKey(*dUserEmail, pp)
   if err != nil {
@@ -96,8 +93,8 @@ func decryptFile() error {
   if err != nil {
     return err
   }
-  if *dOutputFileName != "NOTGIVEN" {
-    filename = *dOutputFileName
+  if *OutputFileName != "NOTGIVEN" {
+    filename = *OutputFileName
   }
   fmt.Println("File received from id '"+sender+"', saving to", filename)
   return ioutil.WriteFile(filename, filecontents, 33204)
@@ -105,6 +102,10 @@ func decryptFile() error {
 }
 
 func getPass() string {
-  fmt.Print("Enter password: ")
-  return string(gopass.GetPasswd())
+  if *PassPhrase != "" {
+    return *PassPhrase
+  } else {
+    fmt.Print("Enter password: ")
+    return string(gopass.GetPasswd())
+  }
 }

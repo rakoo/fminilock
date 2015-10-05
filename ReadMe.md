@@ -3,7 +3,8 @@
 by Cathal Garvey, Copyright Oct. 2015, proudly licensed under the GNU AGPL.
 
 [![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.3.0/dist/gratipay.png)](https://gratipay.com/~onetruecathal/)
-[Tip me a few bits: 32ddsuR73CHH8igCNCLvRE3UwBqL8yU2ag](bitcoin:32ddsuR73CHH8igCNCLvRE3UwBqL8yU2ag?label=Support%20go-miniLock%20and%20other%20projects%20that%20matter)
+
+[Or, Tip me a few bits? - 32ddsuR73CHH8igCNCLvRE3UwBqL8yU2ag](bitcoin:32ddsuR73CHH8igCNCLvRE3UwBqL8yU2ag?label=Support%20go-miniLock%20and%20other%20projects%20that%20matter)
 
 ### What
 TL;DR: go-miniLock is a total Golang rewrite of miniLock, enabling native code performance,

@@ -69,8 +69,8 @@ and documentation for which is [here on Godoc](https://godoc.org/github.com/cath
 For terminal usage of go-miniLock, you can install the tool with: `go get -u github.com/cathalgarvey/go-minilock/minilock-cli`.
 Usage is simple enough and needs improvement:
 
-    go encrypt <file> <your email> <recipient1> [<recipient2>...]
-    go decrypt <file> <your email>
+    minilock-cli encrypt <file> <your email> <recipient1> [<recipient2>...]
+    minilock-cli decrypt <file> <your email>
 
 A number of flags modify usual behaviour. The most important is probably the "-p"
 flag which allows the passphrase for the user's key to be provided directly instead

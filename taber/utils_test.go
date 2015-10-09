@@ -18,6 +18,6 @@ func TestChunkify(t *testing.T) {
 		VPrint("Expected lengths 31, 31, 10 for chunked slice, got: ", len(cs[0]), len(cs[1]), len(cs[2]))
 		VPrint("Input: ", input)
 		VPrint("cs: ", cs)
-		t.Fatal()
+		t.Fail()
 	}
 }

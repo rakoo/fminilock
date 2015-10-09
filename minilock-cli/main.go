@@ -18,6 +18,11 @@ var (
   encrypt = kingpin.Command("encrypt", "Encrypt a file.")
   decrypt = kingpin.Command("decrypt", "Decrypt a file.")
 
+  PassPhrase = kingpin.Flag("passphrase", "Full passphrase for this miniLock key. If not given through this flag, it will be asked for interactively").
+    Short('p').String()
+  OutputFileName = kingpin.Flag("output", "Name of output file. By default for encryption, this is input filename + '.minilock', and for decryption this is the indicated filename in the ciphertext. Warning: Right now this presents potential security hazards!").
+    Short('o').Default("NOTGIVEN").String()
+
   efile = encrypt.Arg("file", "File to encrypt or decrypt.").Required().String()
   dfile = decrypt.Arg("file", "File to encrypt or decrypt.").Required().String()
 
@@ -28,10 +33,11 @@ var (
     Arg("user-email", "Your email address. This need not be secret, but if this isn't *accurate* it must be *globally unique*, it is used for generating security.").
     Required().String()
 
-  PassPhrase = encrypt.Flag("passphrase", "Full passphrase for this miniLock key. If not given through this flag, it will be asked for interactively").
-    Short('p').String()
-  OutputFileName = encrypt.Flag("output", "Name of output file. By default for encryption, this is input filename + '.minilock', and for decryption this is the indicated filename in the ciphertext. Warning: Right now this presents potential security hazards!").
-    Short('o').Default("NOTGIVEN").String()
+//    PassPhrase = encrypt.Flag("passphrase", "Full passphrase for this miniLock key. If not given through this flag, it will be asked for interactively").
+//      Short('p').String()
+//    OutputFileName = encrypt.Flag("output", "Name of output file. By default for encryption, this is input filename + '.minilock', and for decryption this is the indicated filename in the ciphertext. Warning: Right now this presents potential security hazards!").
+//      Short('o').Default("NOTGIVEN").String()
+
 
   recipients = encrypt.Arg("recipients", "One or more miniLock IDs to add to encrypted file.").Strings()
   encryptToSelf = encrypt.Flag("encrypt-to-self", "Whether to add own ID to recipients list, default is True.").

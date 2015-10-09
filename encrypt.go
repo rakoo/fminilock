@@ -92,40 +92,40 @@ func (self *miniLockv1Header) addFileInfo(fileInfo *FileInfo, ephem, sender *tab
 
 // This is an entry point that largely defines "normal" miniLock behaviour.
 // If sendToSender is true, then the sender's ID is added to recipients.
-func EncryptFileContentsWithStrings(filename string, fileContents []byte, senderEmail, senderPassphrase string, sendToSender bool, recipientIDs... string)  (miniLockContents []byte, err error){
-    var (
-			senderKey, this_recipient *taber.Keys
-			recipientKeyList []*taber.Keys
-			this_id string
-		)
-		senderKey, err = taber.FromEmailAndPassphrase(senderEmail, senderPassphrase)
+func EncryptFileContentsWithStrings(filename string, fileContents []byte, senderEmail, senderPassphrase string, sendToSender bool, recipientIDs ...string) (miniLockContents []byte, err error) {
+	var (
+		senderKey, this_recipient *taber.Keys
+		recipientKeyList          []*taber.Keys
+		this_id                   string
+	)
+	senderKey, err = taber.FromEmailAndPassphrase(senderEmail, senderPassphrase)
+	if err != nil {
+		return nil, err
+	}
+	if sendToSender {
+		this_id, err = senderKey.EncodeID()
 		if err != nil {
 			return nil, err
 		}
-		if sendToSender {
-			this_id, err = senderKey.EncodeID()
-			if err != nil {
-				return nil, err
-			}
-			recipientIDs = append(recipientIDs, this_id)
-		}
-    recipientKeyList = make([]*taber.Keys, 0, len(recipientIDs))
-    // TODO: Randomise iteration here?
-		for _, this_id = range recipientIDs {
-			this_recipient, err = taber.FromID(this_id)
-			if err != nil {
-				return nil, err
-			}
-			recipientKeyList = append(recipientKeyList, this_recipient)
-		}
-		miniLockContents, err = EncryptFileContents(filename, fileContents, senderKey, recipientKeyList...)
+		recipientIDs = append(recipientIDs, this_id)
+	}
+	recipientKeyList = make([]*taber.Keys, 0, len(recipientIDs))
+	// TODO: Randomise iteration here?
+	for _, this_id = range recipientIDs {
+		this_recipient, err = taber.FromID(this_id)
 		if err != nil {
 			return nil, err
 		}
-		return miniLockContents, nil
+		recipientKeyList = append(recipientKeyList, this_recipient)
+	}
+	miniLockContents, err = EncryptFileContents(filename, fileContents, senderKey, recipientKeyList...)
+	if err != nil {
+		return nil, err
+	}
+	return miniLockContents, nil
 }
 
-func EncryptFileContents(filename string, fileContents []byte, sender *taber.Keys, recipients... *taber.Keys) (miniLockContents []byte, err error) {
+func EncryptFileContents(filename string, fileContents []byte, sender *taber.Keys, recipients ...*taber.Keys) (miniLockContents []byte, err error) {
 	var (
 		hdr        *miniLockv1Header
 		ephem      *taber.Keys

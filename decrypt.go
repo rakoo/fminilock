@@ -20,10 +20,10 @@ func ParseFile(filepath string) (header *miniLockv1Header, ciphertext []byte, er
 
 // Parses a miniLock file and returns header and ciphertext.
 func ParseFileContents(contents []byte) (header *miniLockv1Header, ciphertext []byte, err error) {
-  var (
+	var (
 		header_length_i32 int32
-		header_length int
-    header_bytes []byte
+		header_length     int
+		header_bytes      []byte
 	)
 	if string(contents[:8]) != magicBytes {
 		return nil, nil, MagicBytesError
@@ -66,9 +66,9 @@ func DecryptFileContents(file_contents []byte, recipientKey *taber.Keys) (sender
 // each chunk, then validate the hash of the file against the hash given in FileInfo.
 // The result is a validated, decrypted filename and file contents byte-slice.
 func (self *FileInfo) DecryptFile(ciphertext []byte) (filename string, contents []byte, err error) {
-  var (
+	var (
 		hash [32]byte
-		DI taber.DecryptInfo
+		DI   taber.DecryptInfo
 	)
 	hash = blake2s.Sum256(ciphertext)
 	if !bytes.Equal(self.FileHash, hash[:]) {

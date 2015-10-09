@@ -107,6 +107,7 @@ func EncryptFileContentsWithStrings(filename string, fileContents []byte, sender
 			if err != nil {
 				return nil, err
 			}
+			recipientIDs = append(recipientIDs, this_id)
 		}
     recipientKeyList = make([]*taber.Keys, 0, len(recipientIDs))
     // TODO: Randomise iteration here?

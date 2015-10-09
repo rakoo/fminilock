@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+// Go-Bindata likes to know where to base paths when loading
+// unit tests?
+var rootDir string = "."
+
 func Test_ParseMinilockFile(t *testing.T) {
 	testcase, err := Asset("binary_samples/mye.go.minilock")
 	if err != nil {

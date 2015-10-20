@@ -105,7 +105,7 @@ Here are things I'd really enjoy, if you're feeling creative. I may start on som
 
 ### Credits Reel
 * [GNU Foundation](https://gnu.org) for Free Software and the GPL/AGPL. :)
-* [Nadim Kobaissi](https://nadim.computer) for miniLock itself.
+* [Nadim Kobeissi](https://nadim.computer) for miniLock itself.
 * [dchest](https://github.com/dchest) for [blake2s](https://github.com/dchest/blake2s), necessary for file hashing in miniLock.
 * [alecthomas](https://github.com/alecthomas) for [kingpin](https://github.com/alecthomas/kingpin), used for CLI flag parsing.
 * [howeyc](https://github.com/howeyc) for [gopass](https://github.com/howeyc/gopass), used for secure interactive password input.

@@ -113,7 +113,7 @@ func getPass() string {
 	if *PassPhrase != "" {
 		return *PassPhrase
 	} else {
-		fmt.Print("Enter password: ")
+		fmt.Print("Enter passphrase: ")
 		return string(gopass.GetPasswd())
 	}
 }

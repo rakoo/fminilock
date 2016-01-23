@@ -7,11 +7,12 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+
 	"github.com/alecthomas/kingpin"
 	"github.com/cathalgarvey/go-minilock"
 	"github.com/cathalgarvey/go-minilock/taber"
 	"github.com/howeyc/gopass"
-	"io/ioutil"
 )
 
 var (
@@ -114,6 +115,10 @@ func getPass() string {
 		return *PassPhrase
 	} else {
 		fmt.Print("Enter passphrase: ")
-		return string(gopass.GetPasswd())
+		p, err := gopass.GetPasswd()
+		if err != nil {
+			panic(err)
+		}
+		return string(p)
 	}
 }

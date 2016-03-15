@@ -41,14 +41,12 @@ func Test_RoundTripMinilock(t *testing.T) {
 }
 
 func Test_EncryptEmptyFile(t *testing.T) {
+	// With thanks to github.com/sahib for discovering and reporting this bug!
 	keys, err := GenerateKey("alice@jabber.wonderland.lit", "drugs")
 	if err != nil {
 		t.Error(err.Error())
 	}
 
-	// Crash on zero-length input. Requires two fixes:
-	// * Clamp in taber
-	// * Clamp/check in minilock.
 	_, err = EncryptFileContents("/tmp/dummy", []byte{}, keys, keys)
 	if err != InsufficientPlaintextError {
 		t.Error("Got wrong error for empty plaintext:", err.Error())

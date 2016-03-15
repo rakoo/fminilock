@@ -25,7 +25,7 @@ func EncryptFileToFileInfo(filename string, filecontents []byte) (FI *FileInfo, 
 func encryptFileToFileInfo(DI *taber.DecryptInfo, filename string, filecontents []byte) (FI *FileInfo, ciphertext []byte, err error) {
 	var hash [32]byte
 	if filecontents == nil || len(filecontents) == 0 {
-		return nil, nil, InsufficientPlaintextError
+		return nil, nil, ErrNilPlaintext
 	}
 	ciphertext, err = DI.Encrypt(filename, filecontents)
 	if err != nil {

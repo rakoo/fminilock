@@ -73,7 +73,7 @@ func RandomKey() (*Keys, error) {
 		return nil, err
 	}
 	if read != 32 {
-		return nil, EntropyInconsistencyError
+		return nil, ErrInsufficientEntropy
 	}
 	rand_reader := bytes.NewReader(rand_bytes)
 	public, private, err := box.GenerateKey(rand_reader)
@@ -112,7 +112,7 @@ func FromID(id string) (*Keys, error) {
 		return nil, err
 	}
 	if len(key_cs_buf) != 33 {
-		return nil, InvalidIDLengthError
+		return nil, ErrInvalidIDLength
 	}
 	kp := Keys{Public: key_cs_buf[:len(key_cs_buf)-1]}
 	cs := key_cs_buf[len(key_cs_buf)-1:]
@@ -126,7 +126,7 @@ func FromID(id string) (*Keys, error) {
 		if err != nil {
 			return nil, err
 		} else {
-			return nil, InvalidIDChecksumError
+			return nil, ErrInvalidIDChecksum
 		}
 	}
 	return &kp, nil
@@ -144,11 +144,11 @@ func (self *Keys) checksum() ([]byte, error) {
 		return nil, err
 	}
 	if written != 32 {
-		return nil, ChecksumGenerationError
+		return nil, ErrChecksumFail
 	}
 	checksum := blakeHasher.Sum(nil)
 	if len(checksum) != 1 {
-		return nil, ChecksumGenerationError
+		return nil, ErrChecksumFail
 	}
 	return checksum, nil
 }
@@ -180,7 +180,7 @@ func (self *Keys) Wipe() error {
 			return err
 		}
 		if read != 32 {
-			return EntropyInconsistencyError
+			return ErrInsufficientEntropy
 		}
 	}
 	read, err = rand.Read(self.Public)
@@ -188,7 +188,7 @@ func (self *Keys) Wipe() error {
 		return err
 	}
 	if read != 32 {
-		return EntropyInconsistencyError
+		return ErrInsufficientEntropy
 	}
 	return nil
 }

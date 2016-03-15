@@ -13,7 +13,7 @@ func randBytes(i int) ([]byte, error) {
 		return nil, err
 	}
 	if read != i {
-		return nil, NotEnoughRandomnessError
+		return nil, ErrInsufficientEntropy
 	}
 	return rand_bytes, nil
 }

@@ -48,7 +48,7 @@ func Test_EncryptEmptyFile(t *testing.T) {
 	}
 
 	_, err = EncryptFileContents("/tmp/dummy", []byte{}, keys, keys)
-	if err != InsufficientPlaintextError {
+	if err != ErrNilPlaintext {
 		t.Error("Got wrong error for empty plaintext:", err.Error())
 	}
 }

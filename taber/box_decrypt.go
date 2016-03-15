@@ -22,7 +22,7 @@ func walkCiphertext(ciphertext []byte) ([]block, error) {
 		}
 		block_ends := loc + prefixToBlockL(int(prefix_int32))
 		if block_ends > len(ciphertext) {
-			return nil, BadLengthPrefixError
+			return nil, ErrBadLengthPrefix
 		}
 		this_block := ciphertext[loc:block_ends]
 		blocks = append(blocks, block{Index: block_index, Block: this_block, err: nil})
@@ -45,7 +45,7 @@ func decryptBlock(key, base_nonce []byte, block *block) ([]byte, error) {
 	plaintext := make([]byte, 0, len(block.Block)-(secretbox.Overhead+4))
 	plaintext, auth = secretbox.Open(plaintext, block.Block[4:], nonceToArray(chunk_nonce), keyToArray(key))
 	if !auth {
-		return nil, BoxAuthenticationError
+		return nil, ErrBadBoxAuth
 	}
 	return plaintext, nil
 }
@@ -73,10 +73,10 @@ func reassemble(plaintext []byte, chunksChan chan *enumeratedChunk, done chan bo
 				e := echunk.endsLocation()
 				// End is calculated using length prefixes so must be regarded as bad
 				if e > len(plaintext) {
-					return nil, BoxDecryptionEOPError
+					return nil, ErrBoxDecryptionEOP
 				}
 				if len(echunk.chunk) > len(plaintext[b:e]) {
-					return nil, BoxDecryptionEOSError
+					return nil, ErrBoxDecryptionEOS
 				}
 				copy(plaintext[b:e], echunk.chunk)
 			}
@@ -167,7 +167,7 @@ func (self *DecryptInfo) Validate() bool {
 
 func (self *DecryptInfo) Decrypt(ciphertext []byte) (filename string, plaintext []byte, err error) {
 	if !self.Validate() {
-		return "", nil, BoxDecryptionVariablesError
+		return "", nil, ErrBadBoxDecryptVars
 	}
 	return decrypt(self.Key, self.BaseNonce, ciphertext)
 }

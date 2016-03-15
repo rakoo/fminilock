@@ -26,7 +26,7 @@ func ParseFileContents(contents []byte) (header *miniLockv1Header, ciphertext []
 		header_bytes      []byte
 	)
 	if string(contents[:8]) != magicBytes {
-		return nil, nil, MagicBytesError
+		return nil, nil, ErrBadMagicBytes
 	}
 	header_length_i32, err = fromLittleEndian(contents[8:12])
 	if err != nil {
@@ -34,7 +34,7 @@ func ParseFileContents(contents []byte) (header *miniLockv1Header, ciphertext []
 	}
 	header_length = int(header_length_i32)
 	if 12+header_length > len(contents) {
-		return nil, nil, BadLengthPrefixError
+		return nil, nil, ErrBadLengthPrefix
 	}
 	header_bytes = contents[12 : 12+header_length]
 	ciphertext = contents[12+header_length:]
@@ -72,7 +72,7 @@ func (self *FileInfo) DecryptFile(ciphertext []byte) (filename string, contents 
 	)
 	hash = blake2s.Sum256(ciphertext)
 	if !bytes.Equal(self.FileHash, hash[:]) {
-		return "", nil, CTHashMismatchError
+		return "", nil, ErrCTHashMismatch
 	}
 	DI = taber.DecryptInfo{Key: self.FileKey, BaseNonce: self.FileNonce}
 	return DI.Decrypt(ciphertext)
@@ -81,7 +81,7 @@ func (self *FileInfo) DecryptFile(ciphertext []byte) (filename string, contents 
 func DecryptDecryptInfo(di_enc, nonce []byte, ephemPubkey, recipientKey *taber.Keys) (*DecryptInfoEntry, error) {
 	plain, err := recipientKey.Decrypt(di_enc, nonce, ephemPubkey)
 	if err != nil {
-		return nil, CannotDecryptError
+		return nil, ErrCannotDecrypt
 	}
 	di := new(DecryptInfoEntry)
 	err = json.Unmarshal(plain, di)
@@ -99,7 +99,7 @@ func (self *DecryptInfoEntry) ExtractFileInfo(nonce []byte, recipientKey *taber.
 	}
 	plain, err := recipientKey.Decrypt(self.FileInfoEnc, nonce, senderPubkey)
 	if err != nil {
-		return nil, CannotDecryptError
+		return nil, ErrCannotDecrypt
 	}
 	fi := new(FileInfo)
 	err = json.Unmarshal(plain, fi)
@@ -131,7 +131,7 @@ func (self *miniLockv1Header) ExtractDecryptInfo(recipientKey *taber.Keys) (nonc
 			return nil, nil, err
 		}
 		DI, err = DecryptDecryptInfo(enc_DI, nonce, ephem_key, recipientKey)
-		if err == CannotDecryptError {
+		if err == ErrCannotDecrypt {
 			continue
 		} else if err != nil {
 			return nil, nil, err
@@ -141,11 +141,11 @@ func (self *miniLockv1Header) ExtractDecryptInfo(recipientKey *taber.Keys) (nonc
 			return nil, nil, err
 		}
 		if DI.RecipientID != recipID {
-			return nil, nil, BadRecipientError
+			return nil, nil, ErrBadRecipient
 		}
 		return nonce, DI, nil
 	}
-	return nil, nil, CannotDecryptError
+	return nil, nil, ErrCannotDecrypt
 }
 
 func (self *miniLockv1Header) ExtractFileInfo(recipientKey *taber.Keys) (fileinfo *FileInfo, senderID string, err error) {

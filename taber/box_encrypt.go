@@ -9,7 +9,7 @@ import (
 
 func makeChunkNonce(base_nonce []byte, chunk_number int, last bool) ([]byte, error) {
 	if len(base_nonce) != 16 {
-		return nil, BadBaseNonceError
+		return nil, ErrBadBaseNonceLength
 	}
 	n := make([]byte, len(base_nonce)+8)
 	chunk_num_b, err := toLittleEndian(int32(chunk_number))
@@ -38,7 +38,7 @@ func encryptChunk(key, base_nonce, chunk []byte, index int, last bool) (*block, 
 		return nil, err
 	}
 	if len(bl_len) > 4 {
-		return nil, BadGeneratedPrefixError
+		return nil, ErrBadPrefix
 	}
 	copy(ciphertext, bl_len)
 	// Put the ciphertext in the space after the first four bytes.
@@ -52,7 +52,7 @@ func prepareNameChunk(filename string) ([]byte, error) {
 	// Prepare name
 	fn_bytes := []byte(filename)
 	if len(fn_bytes) > 256 {
-		return nil, FilenameTooLongError
+		return nil, ErrFilenameTooLong
 	}
 	padded_name := make([]byte, 256, 256)
 	copy(padded_name, fn_bytes)
@@ -113,7 +113,7 @@ func encryptToChan(filename string, key, base_nonce, file_data []byte, block_cha
 // Adds "base_nonce" to public facing version for testing purposes.
 func encrypt(filename string, key, base_nonce, file_data []byte) (ciphertext []byte, err error) {
 	if len(key) != 32 {
-		return nil, WrongLengthKeyError
+		return nil, ErrBadKeyLength
 	}
 	// Pre-allocate space to help assemble the ciphertext afterwards..
 	num_chunks := numChunks(len(file_data), CHUNK_SIZE)
@@ -166,7 +166,7 @@ encrypt_finished:
 // Encrypt symmetrically using this DecryptInfo object.
 func (self *DecryptInfo) Encrypt(filename string, file_data []byte) (ciphertext []byte, err error) {
 	if file_data == nil || len(file_data) == 0 {
-		return nil, EmptyPlaintextError
+		return nil, ErrNilPlaintext
 	}
 	ciphertext, err = encrypt(filename, self.Key, self.BaseNonce, file_data)
 	if err != nil {

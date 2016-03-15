@@ -1,4 +1,4 @@
-/* go-miniLock: An modern, authenticated, asymmetric encryption protocol that conceals metadata
+/*Package miniLock is a modern, authenticated, asymmetric encryption protocol that conceals metadata.
 
 go-miniLock is a total Golang rewrite of miniLock.io, enabling native code performance,
 more platform flexibility, and downstream potential for automation and novel communication

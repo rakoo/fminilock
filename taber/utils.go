@@ -93,3 +93,26 @@ func fromLittleEndian(buf []byte) (int32, error) {
 	}
 	return output, nil
 }
+
+// WipeKeyArray fills a 32-byte array such as used for key material with random bytes.
+// It is intended for use with defer to wipe temporary arrays used to contain key material.
+func WipeKeyArray(arr *[32]byte) error {
+	return wipeByteSlice(arr[:])
+}
+
+func wipeByteSlice(bs []byte) error {
+	var (
+		bsLen int
+		read  int
+		err   error
+	)
+	bsLen = len(bs)
+	read, err = rand.Read(bs)
+	if err != nil {
+		return err
+	}
+	if read != bsLen {
+		return ErrInsufficientEntropy
+	}
+	return nil
+}

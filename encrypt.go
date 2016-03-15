@@ -8,9 +8,11 @@ import (
 	"github.com/dchest/blake2s"
 )
 
-// Encrypt a file symmetrically and return a FileInfo object for it.
+// EncryptFileToFileInfo symmetrically encrypts a file or plaintext and returns
+// the fileInfo object to decrypt it and the raw ciphertext. This operation is
+// technically independent of miniLock and could be used for other crypto-schemes
+// as a handy way to encrypt files symmetrically.
 func EncryptFileToFileInfo(filename string, filecontents []byte) (FI *FileInfo, ciphertext []byte, err error) {
-	// taber.Encrypt(filename string, file_data []byte) (DI *DecryptInfo, ciphertext []byte, err error)
 	var (
 		DI *taber.DecryptInfo
 	)
@@ -39,12 +41,14 @@ func encryptFileToFileInfo(DI *taber.DecryptInfo, filename string, filecontents 
 	return FI, ciphertext, nil
 }
 
+// NewDecryptInfoEntry creates a decryptInfo entry for the given fileInfo to the intended recipientKey,
+// from senderKey.
 func NewDecryptInfoEntry(nonce []byte, fileinfo *FileInfo, senderKey, recipientKey *taber.Keys) (*DecryptInfoEntry, error) {
-	encoded_fi, err := json.Marshal(fileinfo)
+	encodedFi, err := json.Marshal(fileinfo)
 	if err != nil {
 		return nil, err
 	}
-	cipher_fi, err := senderKey.Encrypt(encoded_fi, nonce, recipientKey)
+	cipherFi, err := senderKey.Encrypt(encodedFi, nonce, recipientKey)
 	if err != nil {
 		return nil, err
 	}
@@ -56,24 +60,25 @@ func NewDecryptInfoEntry(nonce []byte, fileinfo *FileInfo, senderKey, recipientK
 	if err != nil {
 		return nil, err
 	}
-	return &DecryptInfoEntry{SenderID: senderID, RecipientID: recipientID, FileInfoEnc: cipher_fi}, nil
+	return &DecryptInfoEntry{SenderID: senderID, RecipientID: recipientID, FileInfoEnc: cipherFi}, nil
 }
 
-// Encrypt a decryptInfo struct using the ephemeral pubkey and the same nonce as the enclosed fileInfo.
+// EncryptDecryptInfo encrypts a decryptInfo struct using the ephemeral pubkey
+// and the same nonce as the enclosed fileInfo.
 func EncryptDecryptInfo(di *DecryptInfoEntry, nonce []byte, ephemKey, recipientKey *taber.Keys) ([]byte, error) {
 	plain, err := json.Marshal(di)
 	if err != nil {
 		return nil, err
 	}
 	// NaClKeypair.Encrypt(plaintext, nonce []byte, to *NaClKeypair) (ciphertext []byte, err error)
-	di_enc, err := ephemKey.Encrypt(plain, nonce, recipientKey)
+	diEnc, err := ephemKey.Encrypt(plain, nonce, recipientKey)
 	if err != nil {
 		return nil, err
 	}
-	return di_enc, nil
+	return diEnc, nil
 }
 
-func (self *miniLockv1Header) addFileInfo(fileInfo *FileInfo, ephem, sender *taber.Keys, recipients ...*taber.Keys) error {
+func (hdr *miniLockv1Header) addFileInfo(fileInfo *FileInfo, ephem, sender *taber.Keys, recipients ...*taber.Keys) error {
 	for _, recipientKey := range recipients {
 		nonce, rgerr := makeFullNonce()
 		if rgerr != nil {
@@ -84,43 +89,44 @@ func (self *miniLockv1Header) addFileInfo(fileInfo *FileInfo, ephem, sender *tab
 		if rgerr != nil {
 			return rgerr
 		}
-		enc_DI, rgerr := EncryptDecryptInfo(DI, nonce, ephem, recipientKey)
+		encDI, rgerr := EncryptDecryptInfo(DI, nonce, ephem, recipientKey)
 		if rgerr != nil {
 			return rgerr
 		}
-		nonce_s := base64.StdEncoding.EncodeToString(nonce)
-		self.DecryptInfo[nonce_s] = enc_DI
+		nonceS := base64.StdEncoding.EncodeToString(nonce)
+		hdr.DecryptInfo[nonceS] = encDI
 	}
 	return nil
 }
 
-// This is an entry point that largely defines "normal" miniLock behaviour.
-// If sendToSender is true, then the sender's ID is added to recipients.
+// EncryptFileContentsWithStrings is an entry point that largely defines "normal"
+// miniLock behaviour. If sendToSender is true, then the sender's ID is added to recipients.
 func EncryptFileContentsWithStrings(filename string, fileContents []byte, senderEmail, senderPassphrase string, sendToSender bool, recipientIDs ...string) (miniLockContents []byte, err error) {
 	var (
-		senderKey, this_recipient *taber.Keys
-		recipientKeyList          []*taber.Keys
-		this_id                   string
+		senderKey, thisRecipient *taber.Keys
+		recipientKeyList         []*taber.Keys
+		thisID                   string
 	)
 	senderKey, err = taber.FromEmailAndPassphrase(senderEmail, senderPassphrase)
 	if err != nil {
 		return nil, err
 	}
+	defer senderKey.Wipe()
 	if sendToSender {
-		this_id, err = senderKey.EncodeID()
+		thisID, err = senderKey.EncodeID()
 		if err != nil {
 			return nil, err
 		}
-		recipientIDs = append(recipientIDs, this_id)
+		recipientIDs = append(recipientIDs, thisID)
 	}
 	recipientKeyList = make([]*taber.Keys, 0, len(recipientIDs))
 	// TODO: Randomise iteration here?
-	for _, this_id = range recipientIDs {
-		this_recipient, err = taber.FromID(this_id)
+	for _, thisID = range recipientIDs {
+		thisRecipient, err = taber.FromID(thisID)
 		if err != nil {
 			return nil, err
 		}
-		recipientKeyList = append(recipientKeyList, this_recipient)
+		recipientKeyList = append(recipientKeyList, thisRecipient)
 	}
 	miniLockContents, err = EncryptFileContents(filename, fileContents, senderKey, recipientKeyList...)
 	if err != nil {
@@ -129,6 +135,9 @@ func EncryptFileContentsWithStrings(filename string, fileContents []byte, sender
 	return miniLockContents, nil
 }
 
+// EncryptFileContents is an entry point for encrypting byte slices from a prepared
+// sender key to prepared recipient keys. EncryptFileContentsWithStrings is much
+// easier to use for most applications.
 func EncryptFileContents(filename string, fileContents []byte, sender *taber.Keys, recipients ...*taber.Keys) (miniLockContents []byte, err error) {
 	var (
 		hdr        *miniLockv1Header

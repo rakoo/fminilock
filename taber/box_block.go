@@ -23,11 +23,14 @@ type block struct {
 	err error
 }
 
-func (self *block) BeginsLocation() int {
-	return FILENAME_BLOCK_LENGTH + (self.Index-1)*BLOCK_LENGTH
+// BeginsLocation predicts where a block of ciphertext should/would begin in the ciphertext.
+func (blk *block) BeginsLocation() int {
+	return FILENAME_BLOCK_LENGTH + (blk.Index-1)*BLOCK_LENGTH
 }
 
-func (self *block) ChunkLength() int {
+// ChunkLength returns the length of the enclosed plaintext chunk by subtracting
+// the length of the encryption/encoding bytes.
+func (blk *block) ChunkLength() int {
 	// Don't use headers, they can't be trusted!
-	return len(self.Block) - (16 + 4)
+	return len(blk.Block) - (16 + 4)
 }

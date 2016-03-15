@@ -19,9 +19,9 @@ var (
 	encrypt = kingpin.Command("encrypt", "Encrypt a file.")
 	decrypt = kingpin.Command("decrypt", "Decrypt a file.")
 
-	PassPhrase = kingpin.Flag("passphrase", "Full passphrase for this miniLock key. If not given through this flag, it will be asked for interactively").
+	passPhrase = kingpin.Flag("passphrase", "Full passphrase for this miniLock key. If not given through this flag, it will be asked for interactively").
 			Short('p').String()
-	OutputFileName = kingpin.Flag("output", "Name of output file. By default for encryption, this is input filename + '.minilock', and for decryption this is the indicated filename in the ciphertext. Warning: Right now this presents potential security hazards!").
+	outputFilename = kingpin.Flag("output", "Name of output file. By default for encryption, this is input filename + '.minilock', and for decryption this is the indicated filename in the ciphertext. Warning: Right now this presents potential security hazards!").
 			Short('o').Default("NOTGIVEN").String()
 
 	efile = encrypt.Arg("file", "File to encrypt or decrypt.").Required().String()
@@ -73,8 +73,8 @@ func encryptFile() error {
 	if err != nil {
 		return err
 	}
-	if *OutputFileName == "NOTGIVEN" {
-		*OutputFileName = *efile + ".minilock"
+	if *outputFilename == "NOTGIVEN" {
+		*outputFilename = *efile + ".minilock"
 	}
 	userKey, err = minilock.GenerateKey(*eUserEmail, pp)
 	if err != nil {
@@ -85,7 +85,7 @@ func encryptFile() error {
 		return err
 	}
 	fmt.Println("File encrypted using ID: '" + userID + "'")
-	return ioutil.WriteFile(*OutputFileName, mlfilecontents, 33204)
+	return ioutil.WriteFile(*outputFilename, mlfilecontents, 33204)
 }
 
 func decryptFile() error {
@@ -102,23 +102,21 @@ func decryptFile() error {
 	if err != nil {
 		return err
 	}
-	if *OutputFileName != "NOTGIVEN" {
-		filename = *OutputFileName
+	if *outputFilename != "NOTGIVEN" {
+		filename = *outputFilename
 	}
 	fmt.Println("File received from id '"+sender+"', saving to", filename)
 	return ioutil.WriteFile(filename, filecontents, 33204)
-	return nil
 }
 
 func getPass() string {
-	if *PassPhrase != "" {
-		return *PassPhrase
-	} else {
-		fmt.Print("Enter passphrase: ")
-		p, err := gopass.GetPasswd()
-		if err != nil {
-			panic(err)
-		}
-		return string(p)
+	if *passPhrase != "" {
+		return *passPhrase
 	}
+	fmt.Print("Enter passphrase: ")
+	p, err := gopass.GetPasswd()
+	if err != nil {
+		panic(err)
+	}
+	return string(p)
 }

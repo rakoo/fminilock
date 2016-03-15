@@ -8,10 +8,10 @@ type enumeratedChunk struct {
 	err   error
 }
 
-func (self *enumeratedChunk) beginsLocation() int {
-	return self.index * CHUNK_SIZE
+func (enChk *enumeratedChunk) beginsLocation() int {
+	return enChk.index * CHUNK_SIZE
 }
 
-func (self *enumeratedChunk) endsLocation() int {
-	return self.beginsLocation() + len(self.chunk)
+func (enChk *enumeratedChunk) endsLocation() int {
+	return enChk.beginsLocation() + len(enChk.chunk)
 }

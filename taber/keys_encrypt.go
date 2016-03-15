@@ -4,22 +4,32 @@ import (
 	"golang.org/x/crypto/nacl/box"
 )
 
-func (self *Keys) Encrypt(plaintext, nonce []byte, to *Keys) (ciphertext []byte, err error) {
+// Encrypt uses key material to encrypt plaintext using the NaCl SecretBox construct.
+func (ks *Keys) Encrypt(plaintext, nonce []byte, to *Keys) (ciphertext []byte, err error) {
 	if len(nonce) != 24 {
 		return nil, ErrBadNonceLength
 	}
 	ciphertext = make([]byte, 0, len(plaintext)+box.Overhead)
-	ciphertext = box.Seal(ciphertext, plaintext, nonceToArray(nonce), to.PublicArray(), self.PrivateArray())
+	toArr := to.PublicArray()
+	defer WipeKeyArray(toArr)
+	pa := ks.PrivateArray()
+	defer WipeKeyArray(pa)
+	ciphertext = box.Seal(ciphertext, plaintext, nonceToArray(nonce), toArr, pa)
 	return ciphertext, nil
 }
 
-func (self *Keys) Decrypt(ciphertext, nonce []byte, from *Keys) (plaintext []byte, err error) {
+// Decrypt decrypts an NaCL box to plaintext.
+func (ks *Keys) Decrypt(ciphertext, nonce []byte, from *Keys) (plaintext []byte, err error) {
 	var ok bool
 	if len(nonce) != 24 {
 		return nil, ErrBadNonceLength
 	}
 	plaintext = make([]byte, 0, len(ciphertext)-box.Overhead)
-	plaintext, ok = box.Open(plaintext[:], ciphertext, nonceToArray(nonce), from.PublicArray(), self.PrivateArray())
+	fromArr := from.PublicArray()
+	defer WipeKeyArray(fromArr)
+	pa := ks.PrivateArray()
+	defer WipeKeyArray(pa)
+	plaintext, ok = box.Open(plaintext[:], ciphertext, nonceToArray(nonce), fromArr, pa)
 	if !ok {
 		return nil, ErrDecryptionAuthFail
 	}

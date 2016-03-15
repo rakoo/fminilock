@@ -2,9 +2,10 @@ package taber
 
 import (
 	"bytes"
-	"golang.org/x/crypto/nacl/secretbox"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/nacl/secretbox"
 )
 
 // Uses length prefixes to parse miniLock ciphertext and return a slice of
@@ -12,38 +13,38 @@ import (
 func walkCiphertext(ciphertext []byte) ([]block, error) {
 	// Enough room for all full blocks, plus the last block, plus the name block.
 	blocks := make([]block, 0, ((len(ciphertext)-256)/BLOCK_LENGTH)+2)
-	block_index := 0
+	blockIndex := 0
 	for loc := 0; loc < len(ciphertext); {
 		//fmt.Println("walkCiphertext: loc =", loc)
-		prefix_leb := ciphertext[loc : loc+4]
-		prefix_int32, err := fromLittleEndian(prefix_leb)
+		prefixLEb := ciphertext[loc : loc+4]
+		prefixInt32, err := fromLittleEndian(prefixLEb)
 		if err != nil {
 			return nil, err
 		}
-		block_ends := loc + prefixToBlockL(int(prefix_int32))
-		if block_ends > len(ciphertext) {
+		blockEnds := loc + prefixToBlockL(int(prefixInt32))
+		if blockEnds > len(ciphertext) {
 			return nil, ErrBadLengthPrefix
 		}
-		this_block := ciphertext[loc:block_ends]
-		blocks = append(blocks, block{Index: block_index, Block: this_block, err: nil})
-		if block_ends == len(ciphertext) {
+		thisBlock := ciphertext[loc:blockEnds]
+		blocks = append(blocks, block{Index: blockIndex, Block: thisBlock, err: nil})
+		if blockEnds == len(ciphertext) {
 			break
 		}
-		loc = block_ends
-		block_index = block_index + 1
+		loc = blockEnds
+		blockIndex = blockIndex + 1
 	}
 	blocks[len(blocks)-1].last = true
 	return blocks, nil
 }
 
-func decryptBlock(key, base_nonce []byte, block *block) ([]byte, error) {
+func decryptBlock(key, baseNonce []byte, block *block) ([]byte, error) {
 	var auth bool
-	chunk_nonce, err := makeChunkNonce(base_nonce, block.Index, block.last)
+	chunkNonce, err := makeChunkNonce(baseNonce, block.Index, block.last)
 	if err != nil {
 		return nil, err
 	}
 	plaintext := make([]byte, 0, len(block.Block)-(secretbox.Overhead+4))
-	plaintext, auth = secretbox.Open(plaintext, block.Block[4:], nonceToArray(chunk_nonce), keyToArray(key))
+	plaintext, auth = secretbox.Open(plaintext, block.Block[4:], nonceToArray(chunkNonce), keyToArray(key))
 	if !auth {
 		return nil, ErrBadBoxAuth
 	}
@@ -51,14 +52,14 @@ func decryptBlock(key, base_nonce []byte, block *block) ([]byte, error) {
 }
 
 // Return everything preceding the first null byte of the decrypted file-name block.
-func decryptName(key, base_nonce []byte, name_block *block) (string, error) {
-	fn_bytes, err := decryptBlock(key, base_nonce, name_block)
+func decryptName(key, baseNonce []byte, nameBlock *block) (string, error) {
+	fnBytes, err := decryptBlock(key, baseNonce, nameBlock)
 	if err != nil {
 		return "", err
 	}
 	// Trim to just the bit preceding the first null, OR the whole thing.
-	fn_bytes = bytes.SplitN(fn_bytes, []byte{0}, 2)[0]
-	return string(fn_bytes), nil
+	fnBytes = bytes.SplitN(fnBytes, []byte{0}, 2)[0]
+	return string(fnBytes), nil
 }
 
 func reassemble(plaintext []byte, chunksChan chan *enumeratedChunk, done chan bool) ([]byte, error) {
@@ -92,41 +93,41 @@ func reassemble(plaintext []byte, chunksChan chan *enumeratedChunk, done chan bo
 	}
 }
 
-func decryptBlockAsync(key, base_nonce []byte, this_block *block, chunksChan chan *enumeratedChunk, wg *sync.WaitGroup) {
+func decryptBlockAsync(key, baseNonce []byte, thisBlock *block, chunksChan chan *enumeratedChunk, wg *sync.WaitGroup) {
 	// Insert decryption code here
 	var echunk *enumeratedChunk
-	chunk, err := decryptBlock(key, base_nonce, this_block)
+	chunk, err := decryptBlock(key, baseNonce, thisBlock)
 	if err != nil {
-		echunk = &enumeratedChunk{err: err, index: this_block.Index - 1}
+		echunk = &enumeratedChunk{err: err, index: thisBlock.Index - 1}
 	} else {
-		echunk = &enumeratedChunk{index: this_block.Index - 1, chunk: chunk}
+		echunk = &enumeratedChunk{index: thisBlock.Index - 1, chunk: chunk}
 	}
 	chunksChan <- echunk
 	wg.Done()
 }
 
 // Parse blocks, fan-out using decryptBlock, re-assemble to original plaintext.
-func decrypt(key, base_nonce, ciphertext []byte) (filename string, plaintext []byte, err error) {
+func decrypt(key, baseNonce, ciphertext []byte) (filename string, plaintext []byte, err error) {
 	blocks, err := walkCiphertext(ciphertext)
 	if err != nil {
 		return "", nil, err
 	}
-	filename, err = decryptName(key, base_nonce, &blocks[0])
+	filename, err = decryptName(key, baseNonce, &blocks[0])
 	if err != nil {
 		return "", nil, err
 	}
 	chunksChan := make(chan *enumeratedChunk)
-	expected_length := 0
+	expectedLength := 0
 	wg := new(sync.WaitGroup)
-	for _, this_block := range blocks[1:] {
-		this_block := this_block
-		expected_length = expected_length + this_block.ChunkLength()
+	for _, thisBlock := range blocks[1:] {
+		thisBlock := thisBlock
+		expectedLength = expectedLength + thisBlock.ChunkLength()
 		wg.Add(1)
-		go decryptBlockAsync(key, base_nonce, &this_block, chunksChan, wg)
+		go decryptBlockAsync(key, baseNonce, &thisBlock, chunksChan, wg)
 	}
 	// If chunks are larger than the space allotted in plaintext,
 	// function will throw an error.
-	plaintext = make([]byte, expected_length)
+	plaintext = make([]byte, expectedLength)
 	// Translates the blocking WaitGroup into non-blocking chan bool "done".
 	done := make(chan bool)
 	go func(done chan bool, wg *sync.WaitGroup) {
@@ -141,7 +142,7 @@ func decrypt(key, base_nonce, ciphertext []byte) (filename string, plaintext []b
 	return filename, plaintext, nil
 }
 
-// A structured object returned by Encrypt to go with ciphertexts, which
+// DecryptInfo is a structured object returned by Encrypt to go with ciphertexts, which
 // provides a method for Decrypting ciphertexts. Can easily be constructed
 // from raw data, passed around, serialised, etcetera.
 type DecryptInfo struct {
@@ -149,6 +150,7 @@ type DecryptInfo struct {
 	Key, BaseNonce []byte
 }
 
+// NewDecryptInfo returns a prepared DecryptInfo with a new Symmetric Key and BaseNonce.
 func NewDecryptInfo() (*DecryptInfo, error) {
 	key, err := makeSymmetricKey()
 	if err != nil {
@@ -161,13 +163,17 @@ func NewDecryptInfo() (*DecryptInfo, error) {
 	return &DecryptInfo{Key: key, BaseNonce: nonce}, nil
 }
 
-func (self *DecryptInfo) Validate() bool {
-	return len(self.Key) == 32 && len(self.BaseNonce) == 16
+// Validate returns simply that the Key and BaseNonce look OK. It's not very clever,
+// but it helps prevent accidental attempts to encrypt with a blank DecryptInfo
+// created accidentally with new(DecryptInfo) or DecryptInfo{}.
+func (di *DecryptInfo) Validate() bool {
+	return len(di.Key) == 32 && len(di.BaseNonce) == 16
 }
 
-func (self *DecryptInfo) Decrypt(ciphertext []byte) (filename string, plaintext []byte, err error) {
-	if !self.Validate() {
+// Decrypt uses enclosed encryption vars to decrypt and authenticate a file.
+func (di *DecryptInfo) Decrypt(ciphertext []byte) (filename string, plaintext []byte, err error) {
+	if !di.Validate() {
 		return "", nil, ErrBadBoxDecryptVars
 	}
-	return decrypt(self.Key, self.BaseNonce, ciphertext)
+	return decrypt(di.Key, di.BaseNonce, ciphertext)
 }

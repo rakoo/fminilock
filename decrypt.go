@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"io/ioutil"
+
 	"github.com/cathalgarvey/go-minilock/taber"
 	"github.com/dchest/blake2s"
-	"io/ioutil"
 )
 
-// Opens file and passes to ParseFileContents
+// ParseFile opens a file and passes to ParseFileContents
 func ParseFile(filepath string) (header *miniLockv1Header, ciphertext []byte, err error) {
 	fc, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -18,68 +19,85 @@ func ParseFile(filepath string) (header *miniLockv1Header, ciphertext []byte, er
 	return ParseFileContents(fc)
 }
 
-// Parses a miniLock file and returns header and ciphertext.
+// ParseFileContents parses a miniLock file and returns header and ciphertext.
 func ParseFileContents(contents []byte) (header *miniLockv1Header, ciphertext []byte, err error) {
 	var (
-		header_length_i32 int32
-		header_length     int
-		header_bytes      []byte
+		headerLengthi32 int32
+		headerLength    int
+		headerBytes     []byte
 	)
 	if string(contents[:8]) != magicBytes {
 		return nil, nil, ErrBadMagicBytes
 	}
-	header_length_i32, err = fromLittleEndian(contents[8:12])
+	headerLengthi32, err = fromLittleEndian(contents[8:12])
 	if err != nil {
 		return nil, nil, err
 	}
-	header_length = int(header_length_i32)
-	if 12+header_length > len(contents) {
+	headerLength = int(headerLengthi32)
+	if 12+headerLength > len(contents) {
 		return nil, nil, ErrBadLengthPrefix
 	}
-	header_bytes = contents[12 : 12+header_length]
-	ciphertext = contents[12+header_length:]
+	headerBytes = contents[12 : 12+headerLength]
+	ciphertext = contents[12+headerLength:]
 	header = new(miniLockv1Header)
-	err = json.Unmarshal(header_bytes, header)
+	err = json.Unmarshal(headerBytes, header)
 	if err != nil {
 		return nil, nil, err
 	}
 	return header, ciphertext, nil
 }
 
-// Parse header and ciphertext from a file, decrypt the header with recipientKey,
-// and use details therein to decrypt the enclosed file. Returns sender, filename,
-// file contents if successful, or an error if not; Check the error to see if it's
-// benign (cannot decrypt with given key) or bad.
-func DecryptFileContents(file_contents []byte, recipientKey *taber.Keys) (senderID, filename string, contents []byte, err error) {
+// DecryptFileContents parses header and ciphertext from a file, decrypts the
+// header with recipientKey, and uses details therein to decrypt the enclosed file.
+// Returns sender, filename, file contents if successful, or an error if not;
+// Check the error to see if it's benign (cannot decrypt with given key) or bad.
+func DecryptFileContents(fileContents []byte, recipientKey *taber.Keys) (senderID, filename string, contents []byte, err error) {
 	var (
 		header     *miniLockv1Header
 		ciphertext []byte
 	)
-	header, ciphertext, err = ParseFileContents(file_contents)
+	header, ciphertext, err = ParseFileContents(fileContents)
 	if err != nil {
 		return "", "", nil, err
 	}
 	return header.DecryptContents(ciphertext, recipientKey)
 }
 
-// Given a ciphertext, walk it into length prefixed chunks and decrypt/reassemble
+// DecryptFileContentsWithStrings is the highest-level API for decryption.
+// It uses the recipient's email and passphrase to generate their key, attempts
+// decryption, and wipes keys when finished.
+func DecryptFileContentsWithStrings(fileContents []byte, recipientEmail, recipientPassphrase string) (senderID, filename string, contents []byte, err error) {
+	var recipientKey *taber.Keys
+	recipientKey, err = taber.FromEmailAndPassphrase(recipientEmail, recipientPassphrase)
+	if err != nil {
+		return
+	}
+	defer recipientKey.Wipe()
+	return DecryptFileContents(fileContents, recipientKey)
+}
+
+// DecryptFile - Given a ciphertext, walk it into length prefixed chunks and decrypt/reassemble
 // each chunk, then validate the hash of the file against the hash given in FileInfo.
 // The result is a validated, decrypted filename and file contents byte-slice.
-func (self *FileInfo) DecryptFile(ciphertext []byte) (filename string, contents []byte, err error) {
+func (fi *FileInfo) DecryptFile(ciphertext []byte) (filename string, contents []byte, err error) {
 	var (
 		hash [32]byte
 		DI   taber.DecryptInfo
 	)
 	hash = blake2s.Sum256(ciphertext)
-	if !bytes.Equal(self.FileHash, hash[:]) {
+	if !bytes.Equal(fi.FileHash, hash[:]) {
 		return "", nil, ErrCTHashMismatch
 	}
-	DI = taber.DecryptInfo{Key: self.FileKey, BaseNonce: self.FileNonce}
+	DI = taber.DecryptInfo{Key: fi.FileKey, BaseNonce: fi.FileNonce}
 	return DI.Decrypt(ciphertext)
 }
 
-func DecryptDecryptInfo(di_enc, nonce []byte, ephemPubkey, recipientKey *taber.Keys) (*DecryptInfoEntry, error) {
-	plain, err := recipientKey.Decrypt(di_enc, nonce, ephemPubkey)
+// DecryptDecryptInfo is used to extract a decryptInfo object by attempting decryption
+// with a given recipientKey. This must be attempted for each decryptInfo in the header
+// until one works or none work, as miniLock deliberately provides no indication of
+// intended recipients.
+func DecryptDecryptInfo(diEnc, nonce []byte, ephemPubkey, recipientKey *taber.Keys) (*DecryptInfoEntry, error) {
+	plain, err := recipientKey.Decrypt(diEnc, nonce, ephemPubkey)
 	if err != nil {
 		return nil, ErrCannotDecrypt
 	}
@@ -91,13 +109,15 @@ func DecryptDecryptInfo(di_enc, nonce []byte, ephemPubkey, recipientKey *taber.K
 	return di, nil
 }
 
-func (self *DecryptInfoEntry) ExtractFileInfo(nonce []byte, recipientKey *taber.Keys) (*FileInfo, error) {
+// ExtractFileInfo pulls out the fileInfo object from the decryptInfo object,
+// authenticating encryption from the sender.
+func (di *DecryptInfoEntry) ExtractFileInfo(nonce []byte, recipientKey *taber.Keys) (*FileInfo, error) {
 	// Return on failure: minilockutils.DecryptionError
-	senderPubkey, err := self.SenderPubkey()
+	senderPubkey, err := di.SenderPubkey()
 	if err != nil {
 		return nil, err
 	}
-	plain, err := recipientKey.Decrypt(self.FileInfoEnc, nonce, senderPubkey)
+	plain, err := recipientKey.Decrypt(di.FileInfoEnc, nonce, senderPubkey)
 	if err != nil {
 		return nil, ErrCannotDecrypt
 	}
@@ -109,28 +129,28 @@ func (self *DecryptInfoEntry) ExtractFileInfo(nonce []byte, recipientKey *taber.
 	return fi, nil
 }
 
-// Iterates through the header using recipientKey and attempts to decrypt any
-// DecryptInfoEntry using the provided ephemeral key.
-// If unsuccessful, returns minilockutils.DecryptionError
-func (self *miniLockv1Header) ExtractDecryptInfo(recipientKey *taber.Keys) (nonce []byte, DI *DecryptInfoEntry, err error) {
+// ExtractDecryptInfo iterates through the header using recipientKey and
+// attempts to decrypt any DecryptInfoEntry using the provided ephemeral key.
+// If unsuccessful after iterating through all decryptInfo objects, returns ErrCannotDecrypt.
+func (hdr *miniLockv1Header) ExtractDecryptInfo(recipientKey *taber.Keys) (nonce []byte, DI *DecryptInfoEntry, err error) {
 	var (
-		ephem_key *taber.Keys
-		enc_DI    []byte
-		nonce_s   string
+		ephemKey *taber.Keys
+		encDI    []byte
+		nonceS   string
 	)
-	ephem_key = new(taber.Keys)
-	ephem_key.Public = self.Ephemeral
+	ephemKey = new(taber.Keys)
+	ephemKey.Public = hdr.Ephemeral
 	if err != nil {
 		return nil, nil, err
 	}
 	// Look for a DI we can decrypt with recipientKey
 	// TODO: Make this concurrent!
-	for nonce_s, enc_DI = range self.DecryptInfo {
-		nonce, err := base64.StdEncoding.DecodeString(nonce_s)
+	for nonceS, encDI = range hdr.DecryptInfo {
+		nonce, err := base64.StdEncoding.DecodeString(nonceS)
 		if err != nil {
 			return nil, nil, err
 		}
-		DI, err = DecryptDecryptInfo(enc_DI, nonce, ephem_key, recipientKey)
+		DI, err = DecryptDecryptInfo(encDI, nonce, ephemKey, recipientKey)
 		if err == ErrCannotDecrypt {
 			continue
 		} else if err != nil {
@@ -148,8 +168,11 @@ func (self *miniLockv1Header) ExtractDecryptInfo(recipientKey *taber.Keys) (nonc
 	return nil, nil, ErrCannotDecrypt
 }
 
-func (self *miniLockv1Header) ExtractFileInfo(recipientKey *taber.Keys) (fileinfo *FileInfo, senderID string, err error) {
-	nonce, DI, err := self.ExtractDecryptInfo(recipientKey)
+// ExtractFileInfo tries to pull out a fileInfo all-at-once using a recipientKey.
+// It can fail for all the usual reasons including, simply, that the file was not
+// encrypted to this recipientKey.
+func (hdr *miniLockv1Header) ExtractFileInfo(recipientKey *taber.Keys) (fileinfo *FileInfo, senderID string, err error) {
+	nonce, DI, err := hdr.ExtractDecryptInfo(recipientKey)
 	if err != nil {
 		return nil, "", err
 	}
@@ -160,9 +183,12 @@ func (self *miniLockv1Header) ExtractFileInfo(recipientKey *taber.Keys) (fileinf
 	return fileinfo, DI.SenderID, nil
 }
 
-func (self *miniLockv1Header) DecryptContents(ciphertext []byte, recipientKey *taber.Keys) (senderID, filename string, contents []byte, err error) {
+// DecryptContents uses a miniLock file's header to attempt decryption of its ciphertext
+// all-at-once, enclosing the lower-level operations entirely. It can fail for all
+// the usual reasons including that the file simply isn't encrypted to this recipient.
+func (hdr *miniLockv1Header) DecryptContents(ciphertext []byte, recipientKey *taber.Keys) (senderID, filename string, contents []byte, err error) {
 	var FI *FileInfo
-	FI, senderID, err = self.ExtractFileInfo(recipientKey)
+	FI, senderID, err = hdr.ExtractFileInfo(recipientKey)
 	if err != nil {
 		return "", "", nil, err
 	}

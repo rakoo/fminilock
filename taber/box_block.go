@@ -25,7 +25,7 @@ type block struct {
 
 // BeginsLocation predicts where a block of ciphertext should/would begin in the ciphertext.
 func (blk *block) BeginsLocation() int {
-	return FILENAME_BLOCK_LENGTH + (blk.Index-1)*BLOCK_LENGTH
+	return ConstFilenameBlockLength + (blk.Index-1)*ConstBlockLength
 }
 
 // ChunkLength returns the length of the enclosed plaintext chunk by subtracting

@@ -9,7 +9,7 @@ type enumeratedChunk struct {
 }
 
 func (enChk *enumeratedChunk) beginsLocation() int {
-	return enChk.index * CHUNK_SIZE
+	return enChk.index * ConstChunkSize
 }
 
 func (enChk *enumeratedChunk) endsLocation() int {

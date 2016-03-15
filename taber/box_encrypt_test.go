@@ -21,7 +21,7 @@ func init() {
 	n6, _ = base64.StdEncoding.DecodeString("MDEyMzQ1Njc4OTAxMjM0NQUAAAAAAAAA")
 	first_6_nonces = [][]byte{n1, n2, n3, n4, n5, n6}
 	n12last, _ = base64.StdEncoding.DecodeString("MDEyMzQ1Njc4OTAxMjM0NQsAAAAAAACA")
-	large_plaintext = make([]byte, 167+CHUNK_SIZE*10)
+	large_plaintext = make([]byte, 167+ConstChunkSize*10)
 	for _, ch := range chunkify(large_plaintext, 100) {
 		copy(ch, []byte(" this is a longer message consisting of 100 characters, repeated ad nauseum to create a test case.. "))
 	}
@@ -108,7 +108,7 @@ func Test_OneBlockEncrypt(t *testing.T) {
 
 func Test_ManyBlockEncrypt(t *testing.T) {
 	VPrint("Preparing a longer plaintext for encryption..")
-	if len(large_plaintext) != (167 + (CHUNK_SIZE * 10)) {
+	if len(large_plaintext) != (167 + (ConstChunkSize * 10)) {
 		t.Error("Failed to create test case of expected length.")
 	}
 	plaintextfn := "This is another filename.txt"

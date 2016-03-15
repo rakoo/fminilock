@@ -79,9 +79,9 @@ func encryptToChan(filename string, key, base_nonce, file_data []byte, block_cha
 	block_chan <- fn_block
 	// Get expected chunk number so special treatment of last chunk can be done
 	// correctly.
-	num_chunks := numChunks(len(file_data), CHUNK_SIZE)
+	num_chunks := numChunks(len(file_data), ConstChunkSize)
 	wg := new(sync.WaitGroup)
-	for i, chunk := range chunkify(file_data, CHUNK_SIZE) {
+	for i, chunk := range chunkify(file_data, ConstChunkSize) {
 		block_number := i + 1
 		wg.Add(1)
 		// Fan out the job of encrypting each chunk. Each ciphertext block gets passed
@@ -116,13 +116,13 @@ func encrypt(filename string, key, base_nonce, file_data []byte) (ciphertext []b
 		return nil, ErrBadKeyLength
 	}
 	// Pre-allocate space to help assemble the ciphertext afterwards..
-	num_chunks := numChunks(len(file_data), CHUNK_SIZE)
+	num_chunks := numChunks(len(file_data), ConstChunkSize)
 	// Now allocate all but the last block. The last block is *appended* to the
 	// output, the others are *copied*.
 	// Each block requires 4 for the LE int length prefix, CHUNK_SIZE for the block,
 	// and 16 for the encryption overhead.
-	max_length := FILENAME_BLOCK_LENGTH + (num_chunks * BLOCK_LENGTH)
-	ciphertext = make([]byte, max_length-BLOCK_LENGTH, max_length)
+	max_length := ConstFilenameBlockLength + (num_chunks * ConstBlockLength)
+	ciphertext = make([]byte, max_length-ConstBlockLength, max_length)
 	// Now fan-out the job of encrypting the file...
 	block_chan := make(chan *block)
 	done_chan := make(chan bool)

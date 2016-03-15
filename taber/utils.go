@@ -10,41 +10,41 @@ import (
 
 // Return a slice of slices representing <chunk_length> chunks of <data>,
 // excepting the last chunk which may be truncated.
-func chunkify(data []byte, chunk_length int) [][]byte {
+func chunkify(data []byte, chunkLength int) [][]byte {
 	dlen := len(data)
-	num_chunks := numChunks(dlen, chunk_length)
-	output := make([][]byte, 0, num_chunks)
+	numChunks := numChunks(dlen, chunkLength)
+	output := make([][]byte, 0, numChunks)
 	// Populate chunk slices
-	for cn := 0; cn < num_chunks; cn++ {
-		chunk_begin := cn * chunk_length
-		chunk_end := chunk_begin + chunk_length
-		if chunk_end > dlen {
-			chunk_end = dlen
+	for cn := 0; cn < numChunks; cn++ {
+		chunkBegin := cn * chunkLength
+		chunkEnd := chunkBegin + chunkLength
+		if chunkEnd > dlen {
+			chunkEnd = dlen
 		}
-		this_chunk := data[chunk_begin:chunk_end]
-		output = append(output, this_chunk)
+		thisChunk := data[chunkBegin:chunkEnd]
+		output = append(output, thisChunk)
 	}
 	return output
 }
 
-func numChunks(data_length, chunk_length int) int {
-	num_chunks := data_length / chunk_length
-	if (data_length % chunk_length) > 0 {
-		num_chunks = num_chunks + 1
+func numChunks(dataLength, chunkLength int) int {
+	numChunks := dataLength / chunkLength
+	if (dataLength % chunkLength) > 0 {
+		numChunks = numChunks + 1
 	}
-	return num_chunks
+	return numChunks
 }
 
 func randBytes(i int) ([]byte, error) {
-	rand_bytes := make([]byte, i)
-	read, err := rand.Read(rand_bytes)
+	randBytes := make([]byte, i)
+	read, err := rand.Read(randBytes)
 	if err != nil {
 		return nil, err
 	}
 	if read != i {
 		return nil, ErrInsufficientEntropy
 	}
-	return rand_bytes, nil
+	return randBytes, nil
 }
 
 func makeBaseNonce() ([]byte, error) {
@@ -86,8 +86,8 @@ func toLittleEndian(i int32) ([]byte, error) {
 
 func fromLittleEndian(buf []byte) (int32, error) {
 	var output int32
-	buf_reader := bytes.NewReader(buf)
-	err := binary.Read(buf_reader, binary.LittleEndian, &output)
+	bufReader := bytes.NewReader(buf)
+	err := binary.Read(bufReader, binary.LittleEndian, &output)
 	if err != nil {
 		return 0, err
 	}

@@ -12,7 +12,7 @@ import (
 // block objects for decryption.
 func walkCiphertext(ciphertext []byte) ([]block, error) {
 	// Enough room for all full blocks, plus the last block, plus the name block.
-	blocks := make([]block, 0, ((len(ciphertext)-256)/BLOCK_LENGTH)+2)
+	blocks := make([]block, 0, ((len(ciphertext)-256)/ConstBlockLength)+2)
 	blockIndex := 0
 	for loc := 0; loc < len(ciphertext); {
 		//fmt.Println("walkCiphertext: loc =", loc)

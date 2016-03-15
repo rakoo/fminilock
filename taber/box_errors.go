@@ -13,4 +13,5 @@ var (
 	BoxDecryptionEOSError       = errors.New("Chunk length is longer than expected slot in plaintext slice.")
 	FilenameTooLongError        = errors.New("Filename cannot be longer than 256 bytes.")
 	NotEnoughRandomnessError    = errors.New("Got insufficient random bytes from RNG.")
+	EmptyPlaintextError         = errors.New("Asked to encrypt empty plaintext.")
 )

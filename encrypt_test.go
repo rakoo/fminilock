@@ -16,12 +16,12 @@ func Test_RoundTripMinilock(t *testing.T) {
 	sender := testKey1
 	recipient := testKey2
 	// Encryption
-	gen_crypted, err := EncryptFileContents("mye.go", testcase, sender, recipient.PublicOnly(), sender.PublicOnly())
+	genCrypted, err := EncryptFileContents("mye.go", testcase, sender, recipient.PublicOnly(), sender.PublicOnly())
 	if err != nil {
 		t.Fatal("Couldn't create encrypted test case: ", err.Error())
 	}
 	// Decryption
-	senderID, filename, contents, err := DecryptFileContents(gen_crypted, recipient)
+	senderID, filename, contents, err := DecryptFileContents(genCrypted, recipient)
 	if err != nil {
 		t.Fatal("Failed to decrypt with recipient key: " + err.Error())
 	}
@@ -37,6 +37,21 @@ func Test_RoundTripMinilock(t *testing.T) {
 	}
 	if !bytes.Equal(testcase, contents) {
 		t.Error("Received plaintext [1] didn't match encrypted plaintext [2]: \n", string(contents), "\n", string(testcase))
+	}
+}
+
+func Test_EncryptEmptyFile(t *testing.T) {
+	keys, err := GenerateKey("alice@jabber.wonderland.lit", "drugs")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	// Crash on zero-length input. Requires two fixes:
+	// * Clamp in taber
+	// * Clamp/check in minilock.
+	_, err = EncryptFileContents("/tmp/dummy", []byte{}, keys, keys)
+	if err != InsufficientPlaintextError {
+		t.Error("Got wrong error for empty plaintext:", err.Error())
 	}
 }
 

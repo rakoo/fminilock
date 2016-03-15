@@ -1,9 +1,10 @@
 package taber
 
 import (
-	"golang.org/x/crypto/nacl/secretbox"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/nacl/secretbox"
 )
 
 func makeChunkNonce(base_nonce []byte, chunk_number int, last bool) ([]byte, error) {
@@ -164,6 +165,9 @@ encrypt_finished:
 
 // Encrypt symmetrically using this DecryptInfo object.
 func (self *DecryptInfo) Encrypt(filename string, file_data []byte) (ciphertext []byte, err error) {
+	if file_data == nil || len(file_data) == 0 {
+		return nil, EmptyPlaintextError
+	}
 	ciphertext, err = encrypt(filename, self.Key, self.BaseNonce, file_data)
 	if err != nil {
 		return nil, err

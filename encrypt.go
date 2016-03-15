@@ -3,6 +3,7 @@ package minilock
 import (
 	"encoding/base64"
 	"encoding/json"
+
 	"github.com/cathalgarvey/go-minilock/taber"
 	"github.com/dchest/blake2s"
 )
@@ -23,6 +24,9 @@ func EncryptFileToFileInfo(filename string, filecontents []byte) (FI *FileInfo, 
 // Separated from the above for testing purposes; deterministic ciphertext.
 func encryptFileToFileInfo(DI *taber.DecryptInfo, filename string, filecontents []byte) (FI *FileInfo, ciphertext []byte, err error) {
 	var hash [32]byte
+	if filecontents == nil || len(filecontents) == 0 {
+		return nil, nil, InsufficientPlaintextError
+	}
 	ciphertext, err = DI.Encrypt(filename, filecontents)
 	if err != nil {
 		return nil, nil, err

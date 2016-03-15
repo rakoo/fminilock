@@ -1,6 +1,6 @@
-package minilock
+/* go-miniLock: An modern, authenticated, asymmetric encryption protocol that conceals metadata
 
-/* go-miniLock is a total Golang rewrite of miniLock, enabling native code performance,
+go-miniLock is a total Golang rewrite of miniLock.io, enabling native code performance,
 more platform flexibility, and downstream potential for automation and novel communication
 media not available to the original miniLock Chromium app.
 
@@ -44,3 +44,4 @@ Please use responsibly; crypto is easy to do wrong and can do real harm if it
 exposes private information. I make no guarantees that my code is safe to use, in
 this sense.
 */
+package minilock

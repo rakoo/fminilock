@@ -7,14 +7,14 @@ import (
 
 // Go-Bindata likes to know where to base paths when loading
 // unit tests?
-var rootDir string = "."
+var rootDir = "."
 
 func Test_ParseMinilockFile(t *testing.T) {
 	testcase, err := Asset("binary_samples/mye.go.minilock")
 	if err != nil {
 		t.Fatal("Couldn't load test binary asset.")
 	}
-	expected_plaintext, err := Asset("binary_samples/mye.go")
+	expectedPlaintext, err := Asset("binary_samples/mye.go")
 	if err != nil {
 		t.Fatal("Couldn't load test binary asset.")
 	}
@@ -35,7 +35,7 @@ func Test_ParseMinilockFile(t *testing.T) {
 	if filename != "mye.go" {
 		t.Error("Filename returned should have been 'mye.go', was: " + filename)
 	}
-	if !bytes.Equal(contents, expected_plaintext) {
+	if !bytes.Equal(contents, expectedPlaintext) {
 		t.Error("Plaintext did not match expected plaintext.")
 	}
 	senderID2, filename2, contents2, err := DecryptFileContents(testcase, test1)
@@ -48,7 +48,7 @@ func Test_ParseMinilockFile(t *testing.T) {
 	if filename != filename2 {
 		t.Error("Inconsistency between filename returned by DecryptFileContents and manual parsing/header decryption.")
 	}
-	if !bytes.Equal(contents2, expected_plaintext) {
+	if !bytes.Equal(contents2, expectedPlaintext) {
 		t.Error("Plaintext did not match expected plaintext.")
 	}
 }

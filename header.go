@@ -18,14 +18,27 @@ type FileInfo struct {
 // also containing sender and recipient. It is encrypted to the recipient
 // with an ephemeral key to preserve privacy.
 type DecryptInfoEntry struct {
-	SenderID    string `json:"senderID"`
-	RecipientID string `json:"recipientID"`
-	FileInfoEnc []byte `json:"fileInfo"`
+	SenderID         string `json:"senderID"`
+	RecipientID      string `json:"recipientID"`
+	FileInfoEnc      []byte `json:"fileInfo"`
+	ReplyToID        string `json:"replyToID"`
+	SenderIdentityID string `json:"senderIdentityID"`
+	Verification     string `json:"verification"`
 }
 
 // SenderPubkey returns the pubkey of the sender who (allegedly) created this DecryptInfoEntry.
 func (die *DecryptInfoEntry) SenderPubkey() (*taber.Keys, error) {
 	return taber.FromID(die.SenderID)
+}
+
+func (die *DecryptInfoEntry) contentToVerify() []byte {
+	contentToVerify := make([]byte, 0)
+	contentToVerify = append(contentToVerify, die.SenderID...)
+	contentToVerify = append(contentToVerify, die.RecipientID...)
+	contentToVerify = append(contentToVerify, die.ReplyToID...)
+	contentToVerify = append(contentToVerify, die.SenderIdentityID...)
+	contentToVerify = append(contentToVerify, die.FileInfoEnc...)
+	return contentToVerify
 }
 
 // This is the header that goes atop a miniLock file after the magic

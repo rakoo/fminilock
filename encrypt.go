@@ -43,7 +43,7 @@ func encryptFileToFileInfo(DI *taber.DecryptInfo, filename string, filecontents 
 
 // NewDecryptInfoEntry creates a decryptInfo entry for the given fileInfo to the intended recipientKey,
 // from senderKey.
-func NewDecryptInfoEntry(nonce []byte, fileinfo *FileInfo, senderKey, recipientKey *taber.Keys) (*DecryptInfoEntry, error) {
+func NewDecryptInfoEntry(nonce []byte, fileinfo *FileInfo, senderKey, recipientKey, replyToKey *taber.Keys, senderIdentity *IdentityKeys) (*DecryptInfoEntry, error) {
 	encodedFi, err := json.Marshal(fileinfo)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,27 @@ func NewDecryptInfoEntry(nonce []byte, fileinfo *FileInfo, senderKey, recipientK
 	if err != nil {
 		return nil, err
 	}
-	return &DecryptInfoEntry{SenderID: senderID, RecipientID: recipientID, FileInfoEnc: cipherFi}, nil
+	replyToKeyID, err := replyToKey.EncodeID()
+	if err != nil {
+		return nil, err
+	}
+	senderIdentityID, err := senderIdentity.EncodeID()
+	if err != nil {
+		return nil, err
+	}
+
+	di := &DecryptInfoEntry{
+		SenderID:         senderID,
+		RecipientID:      recipientID,
+		FileInfoEnc:      cipherFi,
+		ReplyToID:        replyToKeyID,
+		SenderIdentityID: senderIdentityID,
+	}
+	contentToVerify := di.contentToVerify()
+	verification := senderIdentity.Sign(contentToVerify)
+	di.Verification = base64.StdEncoding.EncodeToString(verification)
+
+	return di, nil
 }
 
 // EncryptDecryptInfo encrypts a decryptInfo struct using the ephemeral pubkey
@@ -78,14 +98,14 @@ func EncryptDecryptInfo(di *DecryptInfoEntry, nonce []byte, ephemKey, recipientK
 	return diEnc, nil
 }
 
-func (hdr *miniLockv1Header) addFileInfo(fileInfo *FileInfo, ephem, sender *taber.Keys, recipients ...*taber.Keys) error {
+func (hdr *miniLockv1Header) addFileInfo(fileInfo *FileInfo, ephem, sender, replyTo *taber.Keys, identity *IdentityKeys, recipients ...*taber.Keys) error {
 	for _, recipientKey := range recipients {
 		nonce, rgerr := makeFullNonce()
 		if rgerr != nil {
 			return rgerr
 		}
 		// NewDecryptInfoEntry(nonce []byte, fileinfo *FileInfo, senderKey, recipientKey *taber.Keys) (*DecryptInfoEntry, error) {
-		DI, rgerr := NewDecryptInfoEntry(nonce, fileInfo, sender, recipientKey)
+		DI, rgerr := NewDecryptInfoEntry(nonce, fileInfo, sender, recipientKey, replyTo, identity)
 		if rgerr != nil {
 			return rgerr
 		}
@@ -101,21 +121,22 @@ func (hdr *miniLockv1Header) addFileInfo(fileInfo *FileInfo, ephem, sender *tabe
 
 // EncryptFileContentsWithStrings is an entry point that largely defines "normal"
 // miniLock behaviour. If sendToSender is true, then the sender's ID is added to recipients.
-func EncryptFileContentsWithStrings(filename string, fileContents []byte, senderEmail, senderPassphrase string, sendToSender bool, recipientIDs ...string) (miniLockContents []byte, err error) {
+func EncryptFileContentsWithStrings(filename string, fileContents []byte, senderEmail, senderPassphrase string, sendToSender bool, recipientIDs ...string) (miniLockContents []byte, replyTo *taber.Keys, err error) {
 	var (
 		senderKey, thisRecipient *taber.Keys
 		recipientKeyList         []*taber.Keys
 		thisID                   string
+		identity                 *IdentityKeys
 	)
-	senderKey, err = taber.FromEmailAndPassphrase(senderEmail, senderPassphrase)
+	senderKey, err = EphemeralKey()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer senderKey.Wipe()
 	if sendToSender {
 		thisID, err = senderKey.EncodeID()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		recipientIDs = append(recipientIDs, thisID)
 	}
@@ -124,21 +145,32 @@ func EncryptFileContentsWithStrings(filename string, fileContents []byte, sender
 	for _, thisID = range recipientIDs {
 		thisRecipient, err = taber.FromID(thisID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		recipientKeyList = append(recipientKeyList, thisRecipient)
 	}
-	miniLockContents, err = EncryptFileContents(filename, fileContents, senderKey, recipientKeyList...)
+
+	replyTo, err = EphemeralKey()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return miniLockContents, nil
+
+	identity, err = IdentityFromEmailAndPassphrase(senderEmail, senderPassphrase)
+	if err != nil {
+		return nil, nil, err
+	}
+	miniLockContents, err = EncryptFileContents(filename, fileContents, senderKey, replyTo, identity, recipientKeyList...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return miniLockContents, replyTo, nil
 }
 
 // EncryptFileContents is an entry point for encrypting byte slices from a prepared
 // sender key to prepared recipient keys. EncryptFileContentsWithStrings is much
 // easier to use for most applications.
-func EncryptFileContents(filename string, fileContents []byte, sender *taber.Keys, recipients ...*taber.Keys) (miniLockContents []byte, err error) {
+func EncryptFileContents(filename string, fileContents []byte, sender, replyTo *taber.Keys, identity *IdentityKeys, recipients ...*taber.Keys) (miniLockContents []byte, err error) {
 	var (
 		hdr        *miniLockv1Header
 		ephem      *taber.Keys
@@ -153,7 +185,7 @@ func EncryptFileContents(filename string, fileContents []byte, sender *taber.Key
 	if err != nil {
 		return nil, err
 	}
-	err = hdr.addFileInfo(fileInfo, ephem, sender, recipients...)
+	err = hdr.addFileInfo(fileInfo, ephem, sender, replyTo, identity, recipients...)
 	if err != nil {
 		return nil, err
 	}

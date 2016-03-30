@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 
+	"github.com/agl/ed25519"
 	"github.com/cathalgarvey/go-minilock/taber"
 	"github.com/dchest/blake2s"
 )
@@ -51,14 +53,14 @@ func ParseFileContents(contents []byte) (header *miniLockv1Header, ciphertext []
 // header with recipientKey, and uses details therein to decrypt the enclosed file.
 // Returns sender, filename, file contents if successful, or an error if not;
 // Check the error to see if it's benign (cannot decrypt with given key) or bad.
-func DecryptFileContents(fileContents []byte, recipientKey *taber.Keys) (senderID, filename string, contents []byte, err error) {
+func DecryptFileContents(fileContents []byte, recipientKey *taber.Keys) (senderIdentityID, senderID, replyToID, filename string, contents []byte, err error) {
 	var (
 		header     *miniLockv1Header
 		ciphertext []byte
 	)
 	header, ciphertext, err = ParseFileContents(fileContents)
 	if err != nil {
-		return "", "", nil, err
+		return "", "", "", "", nil, err
 	}
 	return header.DecryptContents(ciphertext, recipientKey)
 }
@@ -66,7 +68,7 @@ func DecryptFileContents(fileContents []byte, recipientKey *taber.Keys) (senderI
 // DecryptFileContentsWithStrings is the highest-level API for decryption.
 // It uses the recipient's email and passphrase to generate their key, attempts
 // decryption, and wipes keys when finished.
-func DecryptFileContentsWithStrings(fileContents []byte, recipientEmail, recipientPassphrase string) (senderID, filename string, contents []byte, err error) {
+func DecryptFileContentsWithStrings(fileContents []byte, recipientEmail, recipientPassphrase string) (senderIdentityID, senderID, replyToID, filename string, contents []byte, err error) {
 	var recipientKey *taber.Keys
 	recipientKey, err = taber.FromEmailAndPassphrase(recipientEmail, recipientPassphrase)
 	if err != nil {
@@ -105,6 +107,26 @@ func DecryptDecryptInfo(diEnc, nonce []byte, ephemPubkey, recipientKey *taber.Ke
 	err = json.Unmarshal(plain, di)
 	if err != nil {
 		return nil, err
+	}
+
+	// Verify signature
+	contentToVerify := di.contentToVerify()
+	k, err := IdentityFromID(di.SenderIdentityID)
+	if err != nil {
+		return nil, err
+	}
+	var pk [ed25519.PublicKeySize]byte
+	copy(pk[:], k.Public)
+
+	rawsig, err := base64.StdEncoding.DecodeString(di.Verification)
+	if err != nil {
+		return nil, err
+	}
+	var sig [ed25519.SignatureSize]byte
+	copy(sig[:], rawsig)
+	ok := ed25519.Verify(&pk, contentToVerify, &sig)
+	if !ok {
+		return nil, fmt.Errorf("Invalid signature from sender identity")
 	}
 	return di, nil
 }
@@ -171,30 +193,30 @@ func (hdr *miniLockv1Header) ExtractDecryptInfo(recipientKey *taber.Keys) (nonce
 // ExtractFileInfo tries to pull out a fileInfo all-at-once using a recipientKey.
 // It can fail for all the usual reasons including, simply, that the file was not
 // encrypted to this recipientKey.
-func (hdr *miniLockv1Header) ExtractFileInfo(recipientKey *taber.Keys) (fileinfo *FileInfo, senderID string, err error) {
+func (hdr *miniLockv1Header) ExtractFileInfo(recipientKey *taber.Keys) (fileinfo *FileInfo, senderIdentityID, senderID, replyToID string, err error) {
 	nonce, DI, err := hdr.ExtractDecryptInfo(recipientKey)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", "", err
 	}
 	fileinfo, err = DI.ExtractFileInfo(nonce, recipientKey)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", "", err
 	}
-	return fileinfo, DI.SenderID, nil
+	return fileinfo, DI.SenderIdentityID, DI.SenderID, DI.ReplyToID, nil
 }
 
 // DecryptContents uses a miniLock file's header to attempt decryption of its ciphertext
 // all-at-once, enclosing the lower-level operations entirely. It can fail for all
 // the usual reasons including that the file simply isn't encrypted to this recipient.
-func (hdr *miniLockv1Header) DecryptContents(ciphertext []byte, recipientKey *taber.Keys) (senderID, filename string, contents []byte, err error) {
+func (hdr *miniLockv1Header) DecryptContents(ciphertext []byte, recipientKey *taber.Keys) (senderIdentityID, senderID, replyToID, filename string, contents []byte, err error) {
 	var FI *FileInfo
-	FI, senderID, err = hdr.ExtractFileInfo(recipientKey)
+	FI, senderIdentityID, senderID, replyToID, err = hdr.ExtractFileInfo(recipientKey)
 	if err != nil {
-		return "", "", nil, err
+		return "", "", "", "", nil, err
 	}
 	filename, contents, err = FI.DecryptFile(ciphertext)
 	if err != nil {
-		return "", "", nil, err
+		return "", "", "", "", nil, err
 	}
-	return senderID, filename, contents, nil
+	return senderIdentityID, senderID, replyToID, filename, contents, nil
 }

@@ -1,3 +1,44 @@
+# fminilock
+An extension of minilock to support some kind of lightweight, "eventual" forward secrecy.
+
+We keep the same design as today, with a few changes:
+
+* SenderID and RecipientID now don't identify the sender and the
+  recipient for the long-term; they are also ephemeral
+
+* Identity is guaranteed through an ed25519 keypair, that is generated
+  with the same hardening scheme (eating the same email and passphrase)
+  and that can also be serialized to a practical ID
+
+* This ID is added as a "SenderIdentityID" key inside a DecryptInfoEntry
+
+* In order for the recipient to reply to us, the sender provides an
+  ephemeral, reply-to, minilock key that is stored under the "ReplyToID"
+  key inside the DecryptInfoEntry. This reply-to key provides
+  encryption.
+
+* In order to identify a minilock construct as being sent by a given
+  identity, we concatenate the following fields:
+
+    * SenderID           (base58)
+    * RecipientID        (base58)
+    * ReplyToID          (base58)
+    * Encrypted FileInfo (binary)
+
+  and sign that concatenation with the identity key; the signature is
+  then stored under the "Verification" key inside a DecryptInfoEntry.
+  This way it is the identity key that provides integrity
+
+This design was chosen to minimize the impact of a key leakage, because
+if an ephemeral key does leak it can only be used to decrypt the related
+FileInfo, and not to construct another valid fminilock message with
+another content; in practice the real downside here is that there is
+nothing to prevent replay.
+
+
+
+Forked from [go-minilock](https://github.com/cathalgarvey/go-minilock), original README beyond.
+
 # Go-miniLock
 ### A pure-Go reimplementation of the miniLock asymmetric encryption system.
 by Cathal Garvey, Copyright Oct. 2015, proudly licensed under the GNU AGPL.

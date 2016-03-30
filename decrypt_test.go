@@ -22,15 +22,20 @@ func Test_ParseMinilockFile(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to parse testcase.")
 	}
-	//fmt.Println(header)
-	// Either test1 or test2 should be able to decrypt but only one is the sender..
-	test1 := testKey1
-	senderID, filename, contents, err := header.DecryptContents(ciphertext, test1)
+
+	recipient, _ := GenerateKey("cathalgarvey@some.where", "this is a password that totally works for minilock purposes")
+	senderIdentityID, senderID, replyToID, filename, contents, err := header.DecryptContents(ciphertext, recipient)
 	if err != nil {
-		t.Fatal("Failed to decrypt with testKey1: " + err.Error())
+		t.Fatal("Failed to decrypt with recipient: " + err.Error())
 	}
-	if senderID != "xjjCm44Nuj4DyTBuzguJ1d7K6EdP2TWRYzsqiiAbfcGTr" {
-		t.Error("SenderID was expected to be 'xjjCm44Nuj4DyTBuzguJ1d7K6EdP2TWRYzsqiiAbfcGTr' but was: " + senderID)
+	if senderIdentityID != testKey1ID {
+		t.Error("SenderIdentityID was expected to be '", testKey1ID, "' but was: ", senderIdentityID)
+	}
+	if replyToID != "8nqVZubQa5abyNV1RhkW9Un8BcpFNqXGZaKQCe5obdFb6" {
+		t.Error("ReplyToID was expected to be '8nqVZubQa5abyNV1RhkW9Un8BcpFNqXGZaKQCe5obdFb6' but was: ", replyToID)
+	}
+	if senderID != "Arv5UQQatYC7TvPVNWA6JLduApVMWoYV4f9DS2q5dRbt4" {
+		t.Error("SenderID was expected to be 'Arv5UQQatYC7TvPVNWA6JLduApVMWoYV4f9DS2q5dRbt4' but was: " + senderID)
 	}
 	if filename != "mye.go" {
 		t.Error("Filename returned should have been 'mye.go', was: " + filename)
@@ -38,9 +43,15 @@ func Test_ParseMinilockFile(t *testing.T) {
 	if !bytes.Equal(contents, expectedPlaintext) {
 		t.Error("Plaintext did not match expected plaintext.")
 	}
-	senderID2, filename2, contents2, err := DecryptFileContents(testcase, test1)
+	senderIdentityID2, senderID2, replyToID2, filename2, contents2, err := DecryptFileContents(testcase, recipient)
 	if err != nil {
-		t.Fatal("Failed to decrypt on second try with testKey1: " + err.Error())
+		t.Fatal("Failed to decrypt on second try with recipient: " + err.Error())
+	}
+	if senderIdentityID != senderIdentityID2 {
+		t.Error("Inconsistency between senderIdentityID returned by DecryptFileContents and manual parsing/header decryption")
+	}
+	if replyToID != replyToID2 {
+		t.Error("Inconsistency between replyToID returned by DecryptFileContents and manual parsing/header decryption")
 	}
 	if senderID != senderID2 {
 		t.Error("Inconsistency between senderID returned by DecryptFileContents and manual parsing/header decryption.")

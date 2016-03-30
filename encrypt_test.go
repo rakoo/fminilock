@@ -13,18 +13,39 @@ func Test_RoundTripMinilock(t *testing.T) {
 	if err != nil {
 		t.Fatal("Couldn't load test binary asset.")
 	}
-	sender := testKey1
-	recipient := testKey2
+	sender, err := EphemeralKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	recipient, err := EphemeralKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	replyTo, err := EphemeralKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := testKey1
+
 	// Encryption
-	genCrypted, err := EncryptFileContents("mye.go", testcase, sender, recipient.PublicOnly(), sender.PublicOnly())
+	genCrypted, err := EncryptFileContents("mye.go", testcase, sender, replyTo, identity, recipient.PublicOnly(), sender.PublicOnly())
 	if err != nil {
 		t.Fatal("Couldn't create encrypted test case: ", err.Error())
 	}
 	// Decryption
-	senderID, filename, contents, err := DecryptFileContents(genCrypted, recipient)
+	senderIdentityID, senderID, replyToID, filename, contents, err := DecryptFileContents(genCrypted, recipient)
 	if err != nil {
 		t.Fatal("Failed to decrypt with recipient key: " + err.Error())
 	}
+
+	realSenderIdentityID, err := identity.EncodeID()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if senderIdentityID != realSenderIdentityID {
+		t.Error("Received SenderIdentityID [1] did not match sending identity's ID [2]: ", senderIdentityID, realSenderIdentityID)
+	}
+
 	realSenderID, err := sender.EncodeID()
 	if err != nil {
 		t.Error(err.Error())
@@ -32,6 +53,15 @@ func Test_RoundTripMinilock(t *testing.T) {
 	if senderID != realSenderID {
 		t.Error("Received SenderID [1] did not match sending key's ID [2]: ", senderID, realSenderID)
 	}
+
+	realReplyToID, err := replyTo.EncodeID()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if replyToID != realReplyToID {
+		t.Error("Received ReplyToID [1] did not match sending key's ID [2]: ", replyToID, realReplyToID)
+	}
+
 	if filename != "mye.go" {
 		t.Error("Received filename [1] didn't match encrypted filename [2]: ", filename, "mye.go")
 	}
@@ -42,12 +72,16 @@ func Test_RoundTripMinilock(t *testing.T) {
 
 func Test_EncryptEmptyFile(t *testing.T) {
 	// With thanks to github.com/sahib for discovering and reporting this bug!
-	keys, err := GenerateKey("alice@jabber.wonderland.lit", "drugs")
+	keys, err := EphemeralKey()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	identity, err := IdentityFromEmailAndPassphrase("", "")
 	if err != nil {
 		t.Error(err.Error())
 	}
 
-	_, err = EncryptFileContents("/tmp/dummy", []byte{}, keys, keys)
+	_, err = EncryptFileContents("/tmp/dummy", []byte{}, keys, keys, identity, keys)
 	if err != ErrNilPlaintext {
 		t.Error("Got wrong error for empty plaintext:", err.Error())
 	}
